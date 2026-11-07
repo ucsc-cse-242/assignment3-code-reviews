@@ -17,8 +17,14 @@ def update_assignments(data, centroids):
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # Tie rule: np.argmin returns the FIRST minimum, so a point equidistant from
+    # several centroids goes to the one with the lowest index. Squared distances
+    # are compared (same ordering as Euclidean, no square root needed).
+    import numpy as np
+    data = np.asarray(data, dtype=float)
+    centroids = np.asarray(centroids, dtype=float)
+    sq_dist = ((data[:, None, :] - centroids[None, :, :]) ** 2).sum(axis=2)
+    return np.argmin(sq_dist, axis=1).astype(int)
 
 
 def update_centroids(data, centroids, assignments):
@@ -27,9 +33,18 @@ def update_centroids(data, centroids, assignments):
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    # Empty-cluster policy: a cluster that received no points keeps its previous
+    # centroid. This matters here because the initializer samples with
+    # replacement, so two clusters can start on the same row; the higher-index
+    # duplicate loses every tie and stays empty, frozen in place.
+    import numpy as np
+    data = np.asarray(data, dtype=float)
+    new_centroids = np.array(centroids, dtype=float, copy=True)
+    for j in range(new_centroids.shape[0]):
+        members = data[assignments == j]
+        if len(members):
+            new_centroids[j] = members.mean(axis=0)
+    return new_centroids
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,11 +77,47 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    import numpy as np
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    data, truth = make_toy_data()
+    rng = np.random.default_rng(seed)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(data[:, 0], data[:, 1], c=truth, cmap="tab10", s=4, vmin=0, vmax=9)
+    ax.set(title="Reference: the four make_blobs groups (true labels)",
+           xlabel="x1", ylabel="x2")
+    fig.tight_layout()
+    fig.savefig(output_dir / "kmeans_truth.png", dpi=150)
+    plt.close(fig)
+
+    results = {}
+    for k in K_VALUES:
+        init = get_initial_clusters(k, data, rng)
+        centroids, assignments = kmeans(data, init, max_iterations)
+        sizes = np.bincount(assignments, minlength=k)
+        sse = float(((data - centroids[assignments]) ** 2).sum())
+        results[k] = {"centroids": centroids, "assignments": assignments,
+                      "sizes": sizes, "sse": sse,
+                      "duplicate_init": len(np.unique(init, axis=0)) < k}
+        fig, ax = plt.subplots(figsize=(6, 5))
+        ax.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10", s=4,
+                   vmin=0, vmax=9)
+        ax.scatter(centroids[:, 0], centroids[:, 1], c="black", marker="X",
+                   s=160, edgecolors="white", linewidths=1.5, label="final centroids")
+        ax.set(title=f"K-means, k = {k} (SSE = {sse:.0f})", xlabel="x1", ylabel="x2")
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(output_dir / f"kmeans_k{k}.png", dpi=150)
+        plt.close(fig)
+        print(f"k={k:2d}  SSE={sse:9.1f}  cluster sizes={sizes.tolist()}"
+              + ("  (duplicate initial centroid)" if results[k]["duplicate_init"] else ""))
+    print(f"Saved plots to {output_dir}")
+    return results
 
 
 def main():

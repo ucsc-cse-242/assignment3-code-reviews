@@ -35,8 +35,14 @@ def corrupt_training_labels(clean_labels, rng):
     flipped in one direction to be flipped again by the other rule.
     Return a new array, leaving clean_labels unchanged.
     """
-    # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    # One uniform draw per example; the flip probability is chosen from the
+    # ORIGINAL label, and each example is flipped at most once.
+    import numpy as np
+    clean_labels = np.asarray(clean_labels)
+    prob = np.where(clean_labels == 1, POSITIVE_FLIP_PROBABILITY,
+                    NEGATIVE_FLIP_PROBABILITY)
+    flip = rng.random(clean_labels.shape[0]) < prob
+    return np.where(flip, -clean_labels, clean_labels)
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -49,9 +55,15 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     the original noisy labels, so row ordering does not affect the outcome.
     sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
     """
-    # TODO: Find neighbors using training features only.
-    # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    import numpy as np
+    X = np.asarray(train_features, dtype=float)
+    noisy_labels = np.asarray(noisy_labels)
+    sq = (X * X).sum(axis=1)
+    d2 = sq[:, None] + sq[None, :] - 2 * X @ X.T
+    np.fill_diagonal(d2, np.inf)
+    nbrs = np.argsort(d2, axis=1, kind="stable")[:, :neighbors]
+    votes = noisy_labels[nbrs].sum(axis=1)      # labels are +1 / -1
+    return np.where(votes > 0, 1, -1).astype(noisy_labels.dtype)
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -71,13 +83,42 @@ def run_comparison(repeats, seed, neighbors, output_path):
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
-    # TODO: Generate independent clean training and test splits.
-    # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
-    # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    import csv
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    train_x, train_y = generate_clean_split(rng)
+    test_x, test_y = generate_clean_split(rng)     # independent, stays clean
+
+    rows = []
+    for trial in range(1, repeats + 1):
+        noisy = corrupt_training_labels(train_y, rng)
+        base = train_and_evaluate(train_x, noisy, test_x, test_y)
+        repaired = repair_labels_knn(train_x, noisy, neighbors)   # no clean labels
+        knn = train_and_evaluate(train_x, repaired, test_x, test_y)
+        rows.append({"trial": trial, "baseline_accuracy": base, "knn_accuracy": knn,
+                     "noisy_label_error": float(np.mean(noisy != train_y)),
+                     "repaired_label_error": float(np.mean(repaired != train_y))})
+        print(f"trial {trial:2d}: baseline {base:.4f}  knn {knn:.4f}")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=["trial", "baseline_accuracy", "knn_accuracy"])
+        writer.writeheader()
+        for r in rows:
+            writer.writerow({k: r[k] for k in writer.fieldnames})
+
+    base_mean = float(np.mean([r["baseline_accuracy"] for r in rows]))
+    knn_mean = float(np.mean([r["knn_accuracy"] for r in rows]))
+    print(f"Mean baseline accuracy: {base_mean:.4f}")
+    print(f"Mean K-NN repair accuracy: {knn_mean:.4f}")
+    print(f"Difference (K-NN - baseline): {knn_mean - base_mean:+.4f}")
+    # Diagnostics (computed with the clean training labels AFTER the fact; the
+    # repair itself never sees them).
+    print(f"Mean training-label error: noisy {np.mean([r['noisy_label_error'] for r in rows]):.4f}, "
+          f"repaired {np.mean([r['repaired_label_error'] for r in rows]):.4f}")
+    print(f"Saved per-trial results to {output_path}")
+    return rows
 
 
 def main():

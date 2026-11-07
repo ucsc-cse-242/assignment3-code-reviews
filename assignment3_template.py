@@ -51,8 +51,13 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Positives (1,1),(1,2),(2,1) and negatives (0,0),(1,0),(0,1) are split by
+    # lines of slope -1. The closest opposite-class pairs are (1,1) against
+    # (1,0) and (0,1): each pair differs by one unit along an axis. (1,1) lies on
+    # x1 + x2 = 2 and (1,0),(0,1) both lie on x1 + x2 = 1; every other point is
+    # strictly farther out (x1 + x2 = 3 or 0). The widest street is the band
+    # 1 <= x1 + x2 <= 2, whose two edges touch exactly points 1, 5 and 6.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -64,9 +69,39 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # The support vectors sit on the edges of the street, so w . x + b = +1 at
+    # (1,1) and w . x + b = -1 at (1,0) and (0,1).
+    #   w1 + w2 + b = +1,   w1 + b = -1,   w2 + b = -1
+    # The last two give w1 = w2; the first then gives w1 = w2 = 2, b = -3.
+    # Boundary: 2 x1 + 2 x2 - 3 = 0, i.e. x1 + x2 = 1.5.
+    # Geometric margin (boundary to the nearest training points) = 1 / ||w||
+    #   = 1 / sqrt(8) = sqrt(2) / 4 ~ 0.3536. Full width 2 / ||w|| = sqrt(2) / 2.
+    import math
+    support = [SVM_X[i - 1] for i in identify_support_vectors()]
+    labels = [SVM_Y[i - 1] for i in identify_support_vectors()]
+    pos = [x for x, y in zip(support, labels) if y == 1][0]
+    neg = [x for x, y in zip(support, labels) if y == -1]
+    # Solve the 3x3 linear system w . x_s + b = y_s exactly (Cramer's rule).
+    rows = [(pos[0], pos[1], 1, 1), (neg[0][0], neg[0][1], 1, -1),
+            (neg[1][0], neg[1][1], 1, -1)]
+
+    def det3(m):
+        return (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+                - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+                + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
+
+    a = [r[:3] for r in rows]
+    rhs = [r[3] for r in rows]
+    base = det3(a)
+    sol = []
+    for col in range(3):
+        m = [list(r) for r in a]
+        for i in range(3):
+            m[i][col] = rhs[i]
+        sol.append(det3(m) / base)
+    w1, w2, b = sol
+    margin = 1 / math.hypot(w1, w2)
+    return (w1, w2), b, margin
 
 
 def main():
