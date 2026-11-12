@@ -1,10 +1,14 @@
 """Question 2: K-means (30 points), adapted from Assignment 4, Question 2.
 
-Implement the two update functions from scratch, then complete the experiment.
+NumPy implements the update steps; scikit-learn only generates the toy data.
 """
 
 import argparse
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.datasets import make_blobs
 
 K_VALUES = (2, 3, 4, 6, 10)
 
@@ -15,21 +19,25 @@ def update_assignments(data, centroids):
     Q2(a): the two update functions together are worth 15 points.
     data has shape (n, d); centroids has shape (k, d).
     The result should be an integer array with shape (n,).
-    Resolve equal-distance ties consistently and document your rule.
+    Equal-distance ties select the lowest cluster index.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # argmin selects the lowest cluster index on a distance tie.
+    distances = np.sum((data[:, None, :] - centroids[None, :, :]) ** 2, axis=2)
+    return np.argmin(distances, axis=1)
 
 
 def update_centroids(data, centroids, assignments):
     """Return an updated (k, d) centroid array based on cluster assignments.
 
-    Document how you handle an empty cluster. One valid choice is to retain
-    its previous centroid. Avoid modifying the input centroid array in place.
+    Empty clusters retain their previous centroids. The input centroid array
+    is not modified.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    updated = np.array(centroids, dtype=float, copy=True)
+    for cluster in range(len(centroids)):
+        members = data[assignments == cluster]
+        if len(members):
+            updated[cluster] = members.mean(axis=0)
+    return updated
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -43,7 +51,6 @@ def kmeans(data, centroids, max_iterations=100):
 
 def make_toy_data():
     """Generate the exact make_blobs configuration from Assignment 4."""
-    from sklearn.datasets import make_blobs
     return make_blobs(n_samples=4000, centers=4, cluster_std=0.60, random_state=0)
 
 
@@ -62,19 +69,41 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    data, _ = make_toy_data()
+    rng = np.random.default_rng(seed)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for k in K_VALUES:
+        centroids, assignments = kmeans(
+            data, get_initial_clusters(k, data, rng), max_iterations
+        )
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.scatter(*data.T, c=assignments, cmap="tab10", s=5, alpha=0.65)
+        ax.scatter(
+            *centroids.T,
+            marker="X",
+            s=150,
+            c="black",
+            edgecolors="white",
+            label="Final centroids",
+        )
+        ax.set(title=f"K-means: k = {k}", xlabel="Feature 1", ylabel="Feature 2")
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(output_dir / f"kmeans_k{k}.png", dpi=160)
+        plt.close(fig)
+        print(f"Saved k={k} plot to {output_dir}")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-iterations", type=int, default=100)
-    parser.add_argument("--output-dir", type=Path,
-                        default=Path(__file__).resolve().parent / "results" / "kmeans")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(__file__).resolve().parent / "results" / "kmeans",
+    )
     args = parser.parse_args()
     run_experiments(args.output_dir, args.seed, args.max_iterations)
 

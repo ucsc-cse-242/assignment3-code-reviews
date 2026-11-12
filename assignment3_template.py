@@ -4,6 +4,8 @@
 import argparse
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
 SVM_Y = (1, 1, 1, -1, -1, -1)
@@ -15,26 +17,26 @@ def plot_svm_data(output_path):
     Point IDs are 1-based and match the source table order. This helper
     does not identify support vectors or draw the separating boundary.
     """
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError as exc:
-        raise SystemExit(
-            "Matplotlib could not be imported. Use the README's clean virtual "
-            "environment and install requirements.txt."
-        ) from exc
-
     fig, ax = plt.subplots(figsize=(6, 6))
     for label, color, marker in ((1, "tab:blue", "o"), (-1, "tab:orange", "s")):
         points = [x for x, y in zip(SVM_X, SVM_Y) if y == label]
         ax.scatter(
-            [x[0] for x in points], [x[1] for x in points],
-            color=color, marker=marker, s=90, label=f"y = {label:+d}",
+            [x[0] for x in points],
+            [x[1] for x in points],
+            color=color,
+            marker=marker,
+            s=90,
+            label=f"y = {label:+d}",
         )
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
-        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
-                    textcoords="offset points")
-    ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
-           xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
+        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7), textcoords="offset points")
+    ax.set(
+        xlabel="x1",
+        ylabel="x2",
+        title="Assignment 3: SVM training data",
+        xlim=(-0.5, 2.5),
+        ylim=(-0.5, 2.5),
+    )
     ax.set_aspect("equal", adjustable="box")
     ax.grid(alpha=0.3)
     ax.legend()
@@ -51,8 +53,7 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,18 +65,26 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    weights = (2.0, 2.0)
+    bias = -3.0
+    geometric_margin = 1.0 / (8.0 ** 0.5)
+    return weights, bias, geometric_margin
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--task", choices=("plot", "svm"),
-                        default="plot", help="Default: generate the SVM data plot.")
-    parser.add_argument("--output", type=Path,
-                        default=Path(__file__).resolve().parent / "svm_data.png",
-                        help="Output image path for --task plot.")
+    parser.add_argument(
+        "--task",
+        choices=("plot", "svm"),
+        default="plot",
+        help="Default: generate the SVM data plot.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(__file__).resolve().parent / "svm_data.png",
+        help="Output image path for --task plot.",
+    )
     args = parser.parse_args()
     if args.task == "plot":
         print(f"Saved plot to {plot_svm_data(args.output)}")
