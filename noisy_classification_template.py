@@ -35,8 +35,16 @@ def corrupt_training_labels(clean_labels, rng):
     flipped in one direction to be flipped again by the other rule.
     Return a new array, leaving clean_labels unchanged.
     """
-    # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    import numpy as np
+    clean_labels = np.asarray(clean_labels)
+    # One flip probability per example, chosen from its ORIGINAL label.
+    flip_probability = np.where(clean_labels == 1, POSITIVE_FLIP_PROBABILITY,
+                                NEGATIVE_FLIP_PROBABILITY)
+    # One uniform draw per example, so each label is flipped at most once.
+    flip = rng.random(clean_labels.shape[0]) < flip_probability
+    noisy_labels = clean_labels.copy()
+    noisy_labels[flip] = -clean_labels[flip]
+    return noisy_labels
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -48,10 +56,43 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     Exclude each point itself from its neighborhood. Base all repairs on
     the original noisy labels, so row ordering does not affect the outcome.
     sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
+
+    Method: sklearn NearestNeighbors (Euclidean, brute force) is fit on the
+    training features only. Each point queries neighbors + 1 points, the
+    point itself is removed, and the remaining `neighbors` closest OTHER
+    points vote with their noisy labels. All votes read the same original
+    noisy_labels array, and the result is written to a new array.
+
+    Distance-tie rule: the returned candidates are re-sorted by
+    (distance, row index), so among equally distant neighbors the one with
+    the LOWER row index is used first. A tie exactly at the cutoff between
+    the candidate set and the next point is left to sklearn's ordering;
+    with continuous Gaussian features such ties essentially never occur.
+    Only training features and noisy labels are used, never clean or test labels.
     """
-    # TODO: Find neighbors using training features only.
-    # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    import numpy as np
+    from sklearn.neighbors import NearestNeighbors
+
+    train_features = np.asarray(train_features, dtype=float)
+    noisy_labels = np.asarray(noisy_labels)
+    n = train_features.shape[0]
+
+    search = NearestNeighbors(n_neighbors=neighbors + 1, metric="euclidean",
+                              algorithm="brute").fit(train_features)
+    distances, indices = search.kneighbors(train_features)
+
+    neighbor_idx = np.empty((n, neighbors), dtype=int)
+    for i in range(n):
+        order = np.lexsort((indices[i], distances[i]))  # by distance, then index
+        candidates = indices[i][order]
+        others = candidates[candidates != i]  # drop the point itself
+        neighbor_idx[i] = others[:neighbors]
+
+    # Majority vote of the neighbors' ORIGINAL noisy labels (+1/-1). With an
+    # odd number of binary votes the sum is never zero.
+    votes = noisy_labels[neighbor_idx].sum(axis=1)
+    repaired = np.where(votes > 0, 1, -1).astype(noisy_labels.dtype)
+    return repaired
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -71,13 +112,40 @@ def run_comparison(repeats, seed, neighbors, output_path):
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
-    # TODO: Generate independent clean training and test splits.
-    # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
-    # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    import csv
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    # Independent clean training and test splits, generated once and kept fixed.
+    train_features, train_labels = generate_clean_split(rng)
+    test_features, test_labels = generate_clean_split(rng)
+
+    rows = []
+    for trial in range(1, repeats + 1):
+        noisy_labels = corrupt_training_labels(train_labels, rng)
+        baseline_accuracy = train_and_evaluate(train_features, noisy_labels,
+                                               test_features, test_labels)
+        # The repair sees only training features and the same noisy labels.
+        repaired_labels = repair_labels_knn(train_features, noisy_labels, neighbors)
+        knn_accuracy = train_and_evaluate(train_features, repaired_labels,
+                                          test_features, test_labels)
+        rows.append((trial, baseline_accuracy, knn_accuracy))
+        print(f"trial {trial:2d}: baseline={baseline_accuracy:.4f}  "
+              f"knn={knn_accuracy:.4f}")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(("trial", "baseline_accuracy", "knn_accuracy"))
+        writer.writerows(rows)
+
+    baseline_mean = float(np.mean([r[1] for r in rows]))
+    knn_mean = float(np.mean([r[2] for r in rows]))
+    print(f"Mean baseline accuracy: {baseline_mean:.4f}")
+    print(f"Mean K-NN repair accuracy: {knn_mean:.4f}")
+    print(f"Difference (K-NN - baseline): {knn_mean - baseline_mean:+.4f}")
+    print(f"Saved per-trial results to {output_path}")
 
 
 def main():
