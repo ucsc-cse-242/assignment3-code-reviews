@@ -10,12 +10,10 @@ SVM_Y = (1, 1, 1, -1, -1, -1)
 
 
 def plot_svm_data(output_path):
-    """Generate an annotated scatter plot to help inspect Q1(a) by eye.
-
-    Point IDs are 1-based and match the source table order. This helper
-    does not identify support vectors or draw the separating boundary.
-    """
+    """Plot the six points, their support lines, and the separator."""
     try:
+        import matplotlib
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError as exc:
         raise SystemExit(
@@ -30,7 +28,16 @@ def plot_svm_data(output_path):
             [x[0] for x in points], [x[1] for x in points],
             color=color, marker=marker, s=90, label=f"y = {label:+d}",
         )
+    (w1, w2), bias, _ = derive_svm_separator()
+    x_values = (-0.5, 2.5)
+    for level in (-1, 0, 1):
+        y_values = [(level - bias - w1 * x) / w2 for x in x_values]
+        ax.plot(x_values, y_values, "-" if level == 0 else "--", color="0.4",
+                linewidth=1.2, zorder=0, label="Decision boundary" if level == 0 else None)
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
+        if point_id in identify_support_vectors():
+            ax.scatter(x1, x2, s=240, facecolors="none", edgecolors="black",
+                       linewidths=1)
         ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
                     textcoords="offset points")
     ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
@@ -51,8 +58,7 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -64,9 +70,12 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # The supporting lines are x1 + x2 = 1 and x1 + x2 = 2.
+    # Scaling their scores to -1 and +1 gives these coefficients.
+    weights = (2, 2)
+    bias = -3
+    margin = 1 / (weights[0] ** 2 + weights[1] ** 2) ** 0.5
+    return weights, bias, margin
 
 
 def main():
