@@ -1,9 +1,9 @@
-"""CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
-"""
+"""CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points)."""
 
 import argparse
+import numpy as np
+import math as m
 from pathlib import Path
-
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
 SVM_Y = (1, 1, 1, -1, -1, -1)
@@ -27,14 +27,22 @@ def plot_svm_data(output_path):
     for label, color, marker in ((1, "tab:blue", "o"), (-1, "tab:orange", "s")):
         points = [x for x, y in zip(SVM_X, SVM_Y) if y == label]
         ax.scatter(
-            [x[0] for x in points], [x[1] for x in points],
-            color=color, marker=marker, s=90, label=f"y = {label:+d}",
+            [x[0] for x in points],
+            [x[1] for x in points],
+            color=color,
+            marker=marker,
+            s=90,
+            label=f"y = {label:+d}",
         )
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
-        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
-                    textcoords="offset points")
-    ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
-           xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
+        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7), textcoords="offset points")
+    ax.set(
+        xlabel="x1",
+        ylabel="x2",
+        title="Assignment 3: SVM training data",
+        xlim=(-0.5, 2.5),
+        ylim=(-0.5, 2.5),
+    )
     ax.set_aspect("equal", adjustable="box")
     ax.grid(alpha=0.3)
     ax.legend()
@@ -51,8 +59,9 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+
+    # Inspect the plot and identify all support vectors.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -64,18 +73,62 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+
+    # x = [1,5,6]
+
+    # equations
+    # calculate w, b
+
+    # w_1*x[1]_1 + w_2*x[1]_2 + b = 1
+    # w_1*x[5]_1 + w_2*x[5]_2 + b = -1
+    # w_1*x[6]_1 + w_2*x[6]_2 + b = -1
+
+    # w_1*1 + w_2*1 + b = 1
+    # w_1*1 + w_2*0 + b = -1
+    # w_1*0 + w_2*1 + b = -1
+
+    # w_1 + w_2 + b = 1
+    # w_1 + b = -1
+    # w_2 + b = -1
+
+    # b = -w_1-w_2+1
+    # w_1 = -1-b
+    # w_2 = -1-b
+
+    # b = -(-1-b)-(-1-b)+1
+    # b = -(-2-2b)+1
+    # b = 2+2b+1
+    # b = -3
+
+    # b = -3
+    # w_1 = -2
+    # w_2 = -2
+
+    bias = -3
+    weights = tuple([-2, -2])
+
+    # calc geometric margin
+    # 1 / |w| = 1 / sqrt(2^2 + 2^2) = 1 / 2sqrt(2) = sqrt(2)/4
+    # the convention is that geometric margin is the distance from the separator to a support vector
+    geometric_margin = m.sqrt(2)/4
+
+    return tuple([weights, bias, geometric_margin])
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--task", choices=("plot", "svm"),
-                        default="plot", help="Default: generate the SVM data plot.")
-    parser.add_argument("--output", type=Path,
-                        default=Path(__file__).resolve().parent / "svm_data.png",
-                        help="Output image path for --task plot.")
+    parser.add_argument(
+        "--task",
+        choices=("plot", "svm"),
+        default="plot",
+        help="Default: generate the SVM data plot.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(__file__).resolve().parent / "svm_data.png",
+        help="Output image path for --task plot.",
+    )
     args = parser.parse_args()
     if args.task == "plot":
         print(f"Saved plot to {plot_svm_data(args.output)}")
