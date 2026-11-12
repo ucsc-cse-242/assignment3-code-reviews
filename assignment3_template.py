@@ -2,6 +2,7 @@
 """
 
 import argparse
+import numpy as np
 from pathlib import Path
 
 
@@ -9,7 +10,7 @@ SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
 SVM_Y = (1, 1, 1, -1, -1, -1)
 
 
-def plot_svm_data(output_path):
+def plot_svm_data(output_path, weights=None, bias=None):
     """Generate an annotated scatter plot to help inspect Q1(a) by eye.
 
     Point IDs are 1-based and match the source table order. This helper
@@ -37,6 +38,12 @@ def plot_svm_data(output_path):
            xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
     ax.set_aspect("equal", adjustable="box")
     ax.grid(alpha=0.3)
+
+    if weights is not None and bias is not None:
+        xs = np.linspace(-0.5, 2.5, 2)
+        ys = - (bias + weights[0] * xs) / weights[1]
+        ax.plot(xs, ys, color="black", label="boundary")
+
     ax.legend()
     fig.tight_layout()
     output_path = Path(output_path)
@@ -52,7 +59,8 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # raise NotImplementedError("Identify and justify the support vectors.")
+    return 1, 5, 6
 
 
 def derive_svm_separator():
@@ -64,9 +72,26 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # Derive the maximum-margin separating line from the support vectors.
+    support_vectors = [(SVM_X[i-1], SVM_Y[i-1]) for i in identify_support_vectors()]
+    coefficient_matrix = np.array([[x1, x2, 1.] for (x1, x2), _ in support_vectors])
+    ys = np.array([y for _, y in support_vectors])
+    w1, w2, b = np.linalg.solve(coefficient_matrix, ys)
+
+    # Determine the geometric margin and state its meaning.
+    geometric_margin = 1.0 / ((w1**2 + w2**2) ** 0.5)
+
+    ## Check with sklearn
+    # from sklearn.svm import SVC
+    # model = SVC(kernel="linear", C=1e6).fit(np.array(SVM_X), np.array(SVM_Y))
+    # print(f"[sklearn] Weights: {model.coef_[0]}; bias: {model.intercept_[0]}")
+    # print("[sklearn] support vectors:", model.support_ + 1)
+
+    # Plot solution
+    plot_svm_data("svm_solution.png", weights=(w1, w2), bias=b)
+
+    return (w1, w2), b, geometric_margin
+    # raise NotImplementedError("Derive the SVM boundary and geometric margin.")
 
 
 def main():
