@@ -52,7 +52,7 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -66,7 +66,19 @@ def derive_svm_separator():
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import numpy as np
+ 
+    rows = []
+    targets = []
+    for point_id in identify_support_vectors():
+        x1, x2 = SVM_X[point_id - 1]
+        rows.append([x1, x2, 1])
+        targets.append(SVM_Y[point_id - 1])
+ 
+    w1, w2, b = np.linalg.solve(np.array(rows, dtype=float),
+                                np.array(targets, dtype=float))
+    margin = 1 / np.sqrt(w1 ** 2 + w2 ** 2)
+    return (float(w1), float(w2)), float(b), float(margin)
 
 
 def main():

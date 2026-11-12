@@ -36,7 +36,14 @@ def corrupt_training_labels(clean_labels, rng):
     Return a new array, leaving clean_labels unchanged.
     """
     # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    import numpy as np
+ 
+    flip_probability = np.where(clean_labels == 1, POSITIVE_FLIP_PROBABILITY,
+                                NEGATIVE_FLIP_PROBABILITY)
+    flips = rng.random(len(clean_labels)) < flip_probability
+    noisy_labels = clean_labels.copy()
+    noisy_labels[flips] = -clean_labels[flips]
+    return noisy_labels
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -51,7 +58,18 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     """
     # TODO: Find neighbors using training features only.
     # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    import numpy as np
+ 
+    repaired_labels = np.zeros(len(noisy_labels), dtype=int)
+    for i in range(len(train_features)):
+        distances = np.sqrt(np.sum((train_features - train_features[i]) ** 2, axis=1))
+        distances[i] = np.inf
+        nearest = np.argsort(distances, kind="stable")[:neighbors]
+        if np.sum(noisy_labels[nearest]) > 0:
+            repaired_labels[i] = 1
+        else:
+            repaired_labels[i] = -1
+    return repaired_labels
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -77,7 +95,43 @@ def run_comparison(repeats, seed, neighbors, output_path):
     # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
     # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
     # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    import csv
+    import numpy as np
+ 
+    rng = np.random.default_rng(seed)
+    train_features, train_labels = generate_clean_split(rng)
+    test_features, test_labels = generate_clean_split(rng)
+ 
+    baseline_scores = []
+    knn_scores = []
+    for trial in range(1, repeats + 1):
+        noisy_labels = corrupt_training_labels(train_labels, rng)
+        baseline_accuracy = train_and_evaluate(train_features, noisy_labels,
+                                               test_features, test_labels)
+ 
+        repaired_labels = repair_labels_knn(train_features, noisy_labels, neighbors)
+        knn_accuracy = train_and_evaluate(train_features, repaired_labels,
+                                          test_features, test_labels)
+ 
+        baseline_scores.append(baseline_accuracy)
+        knn_scores.append(knn_accuracy)
+        print(f"Trial {trial}: baseline = {baseline_accuracy:.4f}, "
+              f"K-NN = {knn_accuracy:.4f}")
+ 
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["trial", "baseline_accuracy", "knn_accuracy"])
+        for trial in range(repeats):
+            writer.writerow([trial + 1, baseline_scores[trial], knn_scores[trial]])
+ 
+    baseline_mean = np.mean(baseline_scores)
+    knn_mean = np.mean(knn_scores)
+    print(f"Mean baseline accuracy: {baseline_mean:.4f}")
+    print(f"Mean K-NN accuracy: {knn_mean:.4f}")
+    print(f"Change from baseline: {knn_mean - baseline_mean:+.4f}")
+    print(f"Saved results to {output_path}")
 
 
 def main():
