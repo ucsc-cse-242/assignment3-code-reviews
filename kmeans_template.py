@@ -17,8 +17,16 @@ def update_assignments(data, centroids):
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    import numpy as np
+    data = np.asarray(data, dtype=float)
+    centroids = np.asarray(centroids, dtype=float)
+
+    differences = data[:, np.newaxis, :] - centroids[np.newaxis, :, :]
+
+    squared_distances = np.sum(differences ** 2, axis=2)
+
+    nearest_centroid = np.argmin(squared_distances, axis=1)
+    return nearest_centroid.astype(int)
 
 
 def update_centroids(data, centroids, assignments):
@@ -27,9 +35,15 @@ def update_centroids(data, centroids, assignments):
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+
+    import numpy as np
+    data = np.asarray(data, dtype=float)
+    new_centroids = np.array(centroids, dtype=float, copy=True)
+    for j in range(new_centroids.shape[0]):
+        members = data[assignments == j]
+        if members.shape[0] > 0:
+            new_centroids[j] = members.mean(axis=0)
+    return new_centroids
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,11 +76,42 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    import numpy as np
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    data, true_labels = make_toy_data()
+    rng = np.random.default_rng(seed)
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(data[:, 0], data[:, 1], c=true_labels, cmap="tab10", s=4)
+    ax.set(title="Reference: true generating groups", xlabel="x1", ylabel="x2")
+    fig.tight_layout()
+    fig.savefig(output_dir / "reference_true_labels.png", dpi=150)
+    plt.close(fig)
+
+    for k in K_VALUES:
+        initial = get_initial_clusters(k, data, rng)
+        centroids, assignments = kmeans(data, initial, max_iterations)
+        inertia = float(((data - centroids[assignments]) ** 2).sum())
+        sizes = np.bincount(assignments, minlength=k)
+
+        fig, ax = plt.subplots(figsize=(6, 5))
+        ax.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10",
+                   vmin=0, vmax=9, s=4)
+        ax.scatter(centroids[:, 0], centroids[:, 1], c="black", marker="x",
+                   s=120, linewidths=3, label="centroids")
+        ax.set(title=f"K-means, k = {k} (inertia = {inertia:.0f})",
+               xlabel="x1", ylabel="x2")
+        ax.legend(loc="best")
+        fig.tight_layout()
+        path = output_dir / f"kmeans_k{k}.png"
+        fig.savefig(path, dpi=150)
+        plt.close(fig)
+        print(f"k={k:2d}  inertia={inertia:10.1f}  sizes={sizes.tolist()}  -> {path}")
 
 
 def main():

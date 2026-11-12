@@ -51,8 +51,8 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,9 +64,48 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+
+    import math
+    weights = (2.0, 2.0)
+    bias = -3.0
+    geometric_margin = 1.0 / math.hypot(weights[0], weights[1])
+    return weights, bias, geometric_margin
+
+
+def plot_svm_solution(output_path):
+    """Plot the derived boundary, supporting lines, and circled support vectors."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    (w1, w2), b, margin = derive_svm_separator()
+    sv_ids = identify_support_vectors()
+    fig, ax = plt.subplots(figsize=(6, 6))
+    for label, color, marker in ((1, "tab:blue", "o"), (-1, "tab:orange", "s")):
+        pts = np.array([x for x, y in zip(SVM_X, SVM_Y) if y == label])
+        ax.scatter(pts[:, 0], pts[:, 1], color=color, marker=marker, s=90,
+                   label=f"y = {label:+d}", zorder=3)
+    sv = np.array([SVM_X[i - 1] for i in sv_ids])
+    ax.scatter(sv[:, 0], sv[:, 1], s=320, facecolors="none", edgecolors="k",
+               linewidths=1.5, label="support vectors", zorder=4)
+    for point_id, (x1, x2) in enumerate(SVM_X, start=1):
+        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
+                    textcoords="offset points")
+    xs = np.linspace(-0.5, 2.5, 2)
+    for level, style, name in ((0, "-", "w·x + b = 0"),
+                               (1, "--", "w·x + b = ±1"), (-1, "--", None)):
+        ax.plot(xs, (level - b - w1 * xs) / w2, "k" + style, lw=1.2, label=name)
+    ax.set(xlabel="x1", ylabel="x2", xlim=(-0.5, 2.5), ylim=(-0.5, 2.5),
+           title=f"2x1 + 2x2 - 3 = 0, margin = {margin:.3f}")
+    ax.set_aspect("equal", adjustable="box")
+    ax.grid(alpha=0.3)
+    ax.legend(loc="upper right", fontsize=8)
+    fig.tight_layout()
+    output_path = Path(output_path)
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+    return output_path
 
 
 def main():
@@ -83,6 +122,8 @@ def main():
         print("Support vector point IDs:", identify_support_vectors())
         weights, bias, margin = derive_svm_separator()
         print(f"Weights: {weights}; bias: {bias}; geometric margin: {margin}")
+        solution = Path(__file__).resolve().parent / "svm_solution.png"
+        print(f"Saved solution plot to {plot_svm_solution(solution)}")
 
 
 if __name__ == "__main__":
