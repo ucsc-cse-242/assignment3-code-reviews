@@ -4,6 +4,8 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
+
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
 SVM_Y = (1, 1, 1, -1, -1, -1)
@@ -51,8 +53,9 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Point 1 is the closest +1 point to the -1 class.
+    # Points 5 and 6 are the closest -1 points to the +1 class.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -64,9 +67,18 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # Support vectors satisfy y * (w . x + b) = 1. By symmetry, w = (a, a).
+    #   Point 1 (1, 1), y = +1:  2a + b = 1
+    #   Point 5 (1, 0), y = -1:   a + b = -1
+    # Solving gives a = 2, b = -3, so the boundary is 2*x1 + 2*x2 - 3 = 0.
+    weights = (2.0, 2.0)
+    bias = -3.0
+
+    # Geometric margin = distance from the boundary to the closest points
+    # = 1 / ||w|| = 1 / sqrt(8) ≈ 0.354.
+    margin = 1 / np.linalg.norm(weights)
+
+    return weights, bias, margin
 
 
 def main():
