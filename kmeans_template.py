@@ -5,6 +5,8 @@ Implement the two update functions from scratch, then complete the experiment.
 
 import argparse
 from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
 
 K_VALUES = (2, 3, 4, 6, 10)
 
@@ -17,8 +19,30 @@ def update_assignments(data, centroids):
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # number of points
+    n = data.shape[0]
+    # number of clusters
+    k = centroids.shape[0]
+
+    assignments = np.zeros(n, dtype=int)
+
+    # for each point assign it to the closest cluster
+    for i in range(n):
+        min_dist = float("inf")
+        cluster_idx = 0
+        # find the cluster that has minimal distance
+        for j in range(k):
+            # euclidean distance
+            dist = np.sum((data[i] - centroids[j]) ** 2)
+            # update if there's a closer cluster
+
+            # Ties: if it's is equally close to multiple clusters,
+            # this would choose the cluster with the smallest index
+            if dist < min_dist:
+                min_dist = dist
+                cluster_idx = j
+        assignments[i] = cluster_idx
+    return assignments
 
 
 def update_centroids(data, centroids, assignments):
@@ -27,9 +51,24 @@ def update_centroids(data, centroids, assignments):
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+
+    # number of clusters
+    k = centroids.shape[0]
+
+    # to not modify inplace
+    new_centroids = centroids.copy()
+
+    for i in range(k):
+
+        # filter points assigned to this cluster
+        points = data[assignments == i]
+
+        # update nonempty clusters (retain the previous if it's empty)
+        if len(points) > 0:
+            # average all the points down each column
+            new_centroids[i] = np.mean(points, axis=0)
+
+    return new_centroids
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,12 +101,39 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
 
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # load data
+    data, _ = make_toy_data()
+
+    rng = np.random.default_rng(seed)
+
+    results = []
+
+    # run for each k
+    for k in K_VALUES:
+        centroids = get_initial_clusters(k, data, rng)
+        centroids, assignments = kmeans(data, centroids, max_iterations)
+        results.append((k, centroids, assignments))
+
+    # plot the results
+    for k, centroids, assignments in results:
+        plt.figure()
+        # Plot data points
+        plt.scatter(
+            data[:, 0], data[:, 1],
+            c=assignments, cmap="tab10", s=5
+        )
+        # Plot final centroids
+        plt.scatter(
+            centroids[:, 0], centroids[:, 1],
+            c="black", marker="X", s=150
+        )
+        plt.title(f"K-Means (k={k})")
+        plt.savefig(f"{output_dir}/kmeans_{k}.png")
+        plt.close()
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
