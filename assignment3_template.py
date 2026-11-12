@@ -51,8 +51,15 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # the negative cluster is positioned in the top right side of the plot
+    # the positive cluster is positioned in the bottom left side of the plot
+    # a clear separation would be a line running diagonal from top left to bottom right
+    # the support vectors from each class are the points that are closest to the other classes
+    # as they are the ones that limit how wide the margin will be.
+    # on the positive side: point 1 (1,1) is the point closest to the negative class
+    # on the negative side, point 6 (1,0) and point 5 (0,1) are the closest to the positive class
+    # the widest separation line runs between these 2 lines with the decision boundary
+    return (1,5,6)
 
 
 def derive_svm_separator():
@@ -64,9 +71,17 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import math
+    # NOTE: for the detailed derivation refer to the write up pdf
+    weights = (2.0, 2.0)
+    bias = -3.0
+    # Geometric margin = distance from the boundary to the closest points
+    # = 1 / ||w||
+    # = 1 / sqrt(8) = sqrt(2) / 4 ~= 0.3536.
+    # The full width between the two supporting lines is 2 / ||w|| ~= 0.7071.
+    norm_w = math.hypot(*weights)
+    geometric_margin = 1.0 / norm_w
+    return weights, bias, geometric_margin
 
 
 def main():
