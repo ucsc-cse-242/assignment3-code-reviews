@@ -5,6 +5,9 @@ Complete the TODOs. Keep test labels clean and use them only for evaluation.
 
 import argparse
 from pathlib import Path
+import numpy as np
+from sklearn.metrics import pairwise_distances
+import pandas as pd
 
 SVM_C = 1.0
 SVM_GAMMA = 0.01
@@ -36,7 +39,19 @@ def corrupt_training_labels(clean_labels, rng):
     Return a new array, leaving clean_labels unchanged.
     """
     # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    noisy_labels = clean_labels.copy()
+
+    probabilities = np.where(
+        clean_labels == 1,
+        POSITIVE_FLIP_PROBABILITY,
+        NEGATIVE_FLIP_PROBABILITY
+    )
+
+    flips = rng.random(len(clean_labels)) < probabilities
+
+    noisy_labels[flips] *= -1
+
+    return noisy_labels
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -51,8 +66,23 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     """
     # TODO: Find neighbors using training features only.
     # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    distances = pairwise_distances(
+        train_features, metric="euclidean"
+    )
 
+    # Exclude each point from its own neighborhood
+    np.fill_diagonal(distances, np.inf)
+
+    # Stable sorting preserves lower indices for equal distances
+    nearest = np.argsort(
+        distances, axis=1, kind="stable"
+    )[:, :neighbors]
+
+    neighbor_labels = noisy_labels[nearest]
+
+    votes = np.sum(neighbor_labels, axis=1)
+    repaired_labels = np.where(votes > 0, 1, -1)
+    return repaired_labels
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
     """Train the required RBF SVM and return accuracy on the clean test set."""
@@ -77,7 +107,68 @@ def run_comparison(repeats, seed, neighbors, output_path):
     # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
     # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
     # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+
+
+    rng = np.random.default_rng(seed)
+
+    # Generate independent clean training and test sets
+    train_features, train_labels = generate_clean_split(rng)
+    test_features, test_labels = generate_clean_split(rng)
+
+    results = []
+
+    for trial in range(repeats):
+
+        # Corrupt training labels
+        noisy_labels = corrupt_training_labels(
+            train_labels, rng
+        )
+
+        # Baseline SVM using noisy labels
+        baseline_accuracy = train_and_evaluate(
+            train_features,
+            noisy_labels,
+            test_features,
+            test_labels
+        )
+
+        # Repair the SAME noisy labels
+        repaired_labels = repair_labels_knn(
+            train_features,
+            noisy_labels,
+            neighbors
+        )
+
+        # Train fresh SVM using repaired labels
+        repaired_accuracy = train_and_evaluate(
+            train_features,
+            repaired_labels,
+            test_features,
+            test_labels
+        )
+
+        results.append({
+            "trial": trial + 1,
+            "baseline_accuracy": baseline_accuracy,
+            "repaired_accuracy": repaired_accuracy,
+            "improvement": repaired_accuracy - baseline_accuracy
+        })
+
+    # Save results
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    df = pd.DataFrame(results)
+    df.to_csv(output_path, index=False)
+
+    # Calculate mean accuracies
+    baseline_mean = df["baseline_accuracy"].mean()
+    repaired_mean = df["repaired_accuracy"].mean()
+
+    print(f"Baseline mean accuracy: {baseline_mean:.4f}")
+    print(f"Repaired mean accuracy: {repaired_mean:.4f}")
+    print(f"Change in accuracy: {repaired_mean - baseline_mean:+.4f}")
+    print(f"Results saved to: {output_path}")
 
 
 def main():
