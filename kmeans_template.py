@@ -18,7 +18,15 @@ def update_assignments(data, centroids):
     Resolve equal-distance ties consistently and document your rule.
     """
     # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # Squared Euclidean distance has the same argmin as Euclidean distance.
+    # Tie rule: np.argmin returns the first minimum, so a point equidistant
+    # from several centroids goes to the one with the lowest index.
+    import numpy as np
+    data = np.asarray(data, dtype=float)
+    centroids = np.asarray(centroids, dtype=float)
+    differences = data[:, None, :] - centroids[None, :, :]
+    squared_distances = np.sum(differences ** 2, axis=2)
+    return np.argmin(squared_distances, axis=1).astype(int)
 
 
 def update_centroids(data, centroids, assignments):
@@ -29,7 +37,17 @@ def update_centroids(data, centroids, assignments):
     """
     # TODO: Update the centroid of each nonempty cluster.
     # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    # Empty-cluster policy: a cluster with no assigned points keeps its
+    # previous centroid. This covers duplicate initial centroids, where the
+    # lowest-index tie rule leaves the higher-index copy empty.
+    import numpy as np
+    data = np.asarray(data, dtype=float)
+    new_centroids = np.array(centroids, dtype=float, copy=True)
+    for cluster in range(new_centroids.shape[0]):
+        members = data[assignments == cluster]
+        if members.shape[0] > 0:
+            new_centroids[cluster] = members.mean(axis=0)
+    return new_centroids
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -63,10 +81,63 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     must cluster the features without access to those labels.
     """
     # TODO: Load toy data, create a seeded RNG, and initialize centroids.
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    data, true_labels = make_toy_data()
+    rng = np.random.default_rng(seed)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Optional reference plot; the true labels are never passed to kmeans.
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(data[:, 0], data[:, 1], c=true_labels, cmap="tab10", s=5)
+    ax.set(xlabel="x1", ylabel="x2", title="Reference: true generating groups")
+    fig.tight_layout()
+    fig.savefig(output_dir / "reference_true_labels.png", dpi=150)
+    plt.close(fig)
+
     # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    results = {}
+    for k in K_VALUES:
+        initial = get_initial_clusters(k, data, rng)
+        centroids, assignments = kmeans(data, initial, max_iterations)
+        sizes = np.bincount(assignments, minlength=k)
+        inertia = float(np.sum((data - centroids[assignments]) ** 2))
+        results[k] = (centroids, assignments)
+
+        # TODO: Plot each set of cluster assignments and its final centroids.
+        fig, ax = plt.subplots(figsize=(6, 5))
+        ax.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10",
+                   vmin=0, vmax=9, s=5)
+        ax.scatter(centroids[:, 0], centroids[:, 1], c="black", marker="X",
+                   s=150, edgecolors="white", linewidths=1.5, label="centroids")
+        ax.set(xlabel="x1", ylabel="x2", title=f"K-means, k = {k}")
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+
+        # TODO: Save plots under output_dir and discuss the effect of k.
+        path = output_dir / f"kmeans_k{k}.png"
+        fig.savefig(path, dpi=150)
+        plt.close(fig)
+        print(f"k = {k:2d}: inertia = {inertia:9.2f}; "
+              f"nonempty clusters = {np.count_nonzero(sizes)}; "
+              f"sizes = {sizes.tolist()}; saved {path}")
+
+    # Combined figure of all k values for the report.
+    fig, axes = plt.subplots(1, len(K_VALUES), figsize=(4 * len(K_VALUES), 4))
+    for ax, k in zip(axes, K_VALUES):
+        centroids, assignments = results[k]
+        ax.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10",
+                   vmin=0, vmax=9, s=3)
+        ax.scatter(centroids[:, 0], centroids[:, 1], c="black", marker="X",
+                   s=100, edgecolors="white", linewidths=1.2)
+        ax.set(title=f"k = {k}", xlabel="x1", ylabel="x2")
+    fig.tight_layout()
+    fig.savefig(output_dir / "kmeans_all_k.png", dpi=150)
+    plt.close(fig)
+    print(f"Saved combined plot to {output_dir / 'kmeans_all_k.png'}")
+    return results
 
 
 def main():
