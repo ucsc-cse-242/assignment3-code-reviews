@@ -51,22 +51,40 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Inspect the plot and identify all support vectors.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
-    """Q1(b), 10 points for the boundary and 10 for the geometric margin.
+    """ 
+    Given the support vectors we calculate a linear, hard-margin SVM. 
+    The decision boundary is w dot x + b = 0; this is calculated solving the system of linear equations
 
-    Use a linear, hard-margin SVM. The decision boundary is w dot x + b = 0;
-    retain the intercept b. Use the support vectors to derive it.
-
-    Return (weights, bias, geometric_margin), with weights a pair of numbers.
-    Explain the derivation and your margin convention in the written report.
+    Returns (weights, bias, geometric_margin), with weights a pair of numbers.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import numpy as np
+
+    # these are the support vectors a 1 is appended to the end of each to account for the constant bias term
+    support_vectors = np.array([
+                       # labels:
+            [1, 0, 1], # -1
+            [1, 1, 1], #  1
+            [0, 1, 1]  # -1
+            ]) 
+
+    labels = np.array([-1, 1, -1])
+
+    # solve Ax = b in this case (support_vectors)x = labels 
+    solution = np.linalg.solve(support_vectors, labels)
+    w1, w2, b =  solution[0], solution[1], solution[2]
+
+    # create the weight vector
+    w = np.stack([w1, w2]) 
+
+    # Determine the geometric margin
+    geometric_margin = 1 / np.linalg.norm(w)
+
+    return w, b, geometric_margin
 
 
 def main():
