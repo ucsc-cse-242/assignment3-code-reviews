@@ -6,6 +6,9 @@ Implement the two update functions from scratch, then complete the experiment.
 import argparse
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 K_VALUES = (2, 3, 4, 6, 10)
 
 
@@ -17,8 +20,9 @@ def update_assignments(data, centroids):
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # Compute distances and assign each point to a centroid.
+    distances = ((data[:, None] - centroids[None, :]) ** 2).sum(axis=2)
+    return distances.argmin(axis=1)
 
 
 def update_centroids(data, centroids, assignments):
@@ -27,9 +31,15 @@ def update_centroids(data, centroids, assignments):
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    # Update the centroid of each nonempty cluster.
+    updated_centroids = centroids.copy()
+    for k in range(centroids.shape[0]):
+        mask = assignments == k
+        if mask.any():
+            updated_centroids[k] = data[mask].mean(axis=0)
+    # Handle empty clusters using your documented policy.
+    # An empty cluster retains its previous centroid.
+    return updated_centroids
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,11 +72,41 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    # Load toy data, create a seeded RNG, and initialize centroids.
+    X, y = make_toy_data()
+    rng = np.random.default_rng(seed)
+    for k in K_VALUES:
+        initial_centroids = get_initial_clusters(k, X, rng)
+        # Run kmeans for every value in K_VALUES.
+        final_centroids, assignments = kmeans(X, initial_centroids, max_iterations)
+        # Plot each set of cluster assignments and its final centroids.
+        plt.figure(figsize=(6, 6))
+        plt.scatter(X[:, 0], X[:, 1], c=assignments, s=10, cmap="tab10")
+        plt.scatter(final_centroids[:, 0], final_centroids[:, 1], c="black", s=100, marker="X")
+        plt.title(f"K-means clustering with k={k}")
+        plt.xlabel("Feature 1")
+        plt.ylabel("Feature 2")
+        plt.xlim(X[:, 0].min() - 1, X[:, 0].max() + 1)
+        plt.ylim(X[:, 1].min() - 1, X[:, 1].max() + 1)
+        plt.grid(alpha=0.3)
+        # Save plots under output_dir and discuss the effect of k.
+        output_path = Path(output_dir) / f"kmeans_k{k}.png"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path, dpi=180)
+        plt.close()
+    # Make truth reference plot for comparison
+    plt.figure(figsize=(6, 6))
+    plt.scatter(X[:, 0], X[:, 1], c=y, s=10)
+    plt.title("Ground truth clusters")
+    plt.xlabel("Feature 1")
+    plt.ylabel("Feature 2")
+    plt.xlim(X[:, 0].min() - 1, X[:, 0].max() + 1)
+    plt.ylim(X[:, 1].min() - 1, X[:, 1].max() + 1)
+    plt.grid(alpha=0.3)
+    output_path = Path(output_dir) / "kmeans_truth.png"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, dpi=180)
+    plt.close()
 
 
 def main():

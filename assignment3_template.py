@@ -4,6 +4,8 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
+
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
 SVM_Y = (1, 1, 1, -1, -1, -1)
@@ -51,8 +53,7 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return 1, 5, 6
 
 
 def derive_svm_separator():
@@ -64,9 +65,20 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # Derive the maximum-margin separating line from the support vectors.
+    support_vectors = [SVM_X[i - 1] for i in identify_support_vectors()]
+    support_labels = [SVM_Y[i - 1] for i in identify_support_vectors()]
+    # Solve the linear system to find the weights and bias (wx + b = 1 for positive support vectors, wx + b = -1 for negative).
+    A = [[*sv, 1] for sv in support_vectors]
+    b = [1 if label == 1 else -1 for label in support_labels]
+    # Use numpy to solve the linear system.
+    solution = np.linalg.solve(A, b)
+    weights, bias = solution[:2], solution[2]
+
+    # Determine the geometric margin and state its meaning.
+    geometric_margin = 1 / (weights @ weights) ** 0.5
+    return weights, bias, geometric_margin
+    
 
 
 def main():
