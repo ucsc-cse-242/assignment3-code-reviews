@@ -5,6 +5,8 @@ Complete the TODOs. Keep test labels clean and use them only for evaluation.
 
 import argparse
 from pathlib import Path
+import numpy as np
+import csv
 
 SVM_C = 1.0
 SVM_GAMMA = 0.01
@@ -36,7 +38,12 @@ def corrupt_training_labels(clean_labels, rng):
     Return a new array, leaving clean_labels unchanged.
     """
     # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    probs = np.where(clean_labels == 1,
+                     POSITIVE_FLIP_PROBABILITY,
+                     NEGATIVE_FLIP_PROBABILITY)
+    flips = rng.random(len(clean_labels)) < probs
+    return np.where(flips, -clean_labels, clean_labels)
+    #raise NotImplementedError("Implement asymmetric training-label noise.")
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -51,7 +58,13 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     """
     # TODO: Find neighbors using training features only.
     # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    diff = train_features[:, np.newaxis, :] - train_features[np.newaxis, :, :]
+    sq_dist = np.sum(diff ** 2, axis=2)            # (n, n)
+    np.fill_diagonal(sq_dist, np.inf)              # exclude self
+    nn_idx = np.argsort(sq_dist, axis=1, kind="stable")[:, :neighbors]
+    votes = noisy_labels[nn_idx]                   # (n, neighbors)
+    return np.sign(votes.sum(axis=1)).astype(int)  # majority of 5, never 0
+    #raise NotImplementedError("Implement K-NN majority-vote label repair.")
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -77,7 +90,57 @@ def run_comparison(repeats, seed, neighbors, output_path):
     # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
     # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
     # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    rng = np.random.default_rng(seed)
+
+    # Fixed, independent clean splits (test labels stay clean)
+    train_X, train_y = generate_clean_split(rng)
+    test_X, test_y = generate_clean_split(rng)
+
+    baseline_accs = []
+    for trial in range(repeats):
+        noisy_y = corrupt_training_labels(train_y, rng)
+        acc = train_and_evaluate(train_X, noisy_y, test_X, test_y)
+        baseline_accs.append(acc)
+        print(f"trial {trial}: baseline = {acc:.4f}")
+
+    print(f"Mean baseline accuracy: {np.mean(baseline_accs):.4f}")
+    rng = np.random.default_rng(seed)
+
+    # Fixed, independent clean splits (test labels stay clean)
+    train_X, train_y = generate_clean_split(rng)
+    test_X, test_y = generate_clean_split(rng)
+
+    rows = []
+    for trial in range(repeats):
+        noisy_y = corrupt_training_labels(train_y, rng)
+
+        # (a) baseline: SVM on noisy labels
+        base_acc = train_and_evaluate(train_X, noisy_y, test_X, test_y)
+
+        # (b) repair the SAME noisy labels, then train a fresh SVM
+        repaired_y = repair_labels_knn(train_X, noisy_y, neighbors)
+        knn_acc = train_and_evaluate(train_X, repaired_y, test_X, test_y)
+
+        rows.append({"trial": trial,
+                     "baseline_accuracy": base_acc,
+                     "knn_accuracy": knn_acc})
+        print(f"trial {trial}: baseline = {base_acc:.4f}, knn = {knn_acc:.4f}")
+
+    # Save per-trial results
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["trial", "baseline_accuracy", "knn_accuracy"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+    base_mean = np.mean([r["baseline_accuracy"] for r in rows])
+    knn_mean = np.mean([r["knn_accuracy"] for r in rows])
+    print(f"Mean baseline accuracy: {base_mean:.4f}")
+    print(f"Mean K-NN repair accuracy: {knn_mean:.4f}")
+    print(f"Difference (knn - baseline): {knn_mean - base_mean:+.4f}")
+    print(f"Saved {output_path}")
+    #raise NotImplementedError("Complete the repeated noise-repair comparison.")
 
 
 def main():
