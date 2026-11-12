@@ -33,7 +33,7 @@ def plot_svm_data(output_path):
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
         ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
                     textcoords="offset points")
-    ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
+    ax.set(xlabel="x1", ylabel="x2", title="SVM training data",
            xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
     ax.set_aspect("equal", adjustable="box")
     ax.grid(alpha=0.3)
@@ -41,7 +41,7 @@ def plot_svm_data(output_path):
     fig.tight_layout()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=180)
+    fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
     return output_path
 
@@ -51,8 +51,8 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Inspect the plot and identify all support vectors.
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,10 +64,16 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
-
+    from sklearn.svm import SVC 
+    # Derive the maximum-margin separating line from the support vectors. 
+    clf = SVC(kernel="linear", C=1e6, tol=1e-6)  # Hard-margin SVM. C penalizes margin violations. A large value strongly discourages them.
+    clf.fit(SVM_X, SVM_Y) 
+    # Extract the weights and bias from the trained classifier.
+    weights = clf.coef_[0]
+    bias = clf.intercept_[0]
+    return weights, bias, 1 / (weights @ weights) ** 0.5  # Geometric margin formula.
+    # Determine the geometric margin and state its meaning. 
+    
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
