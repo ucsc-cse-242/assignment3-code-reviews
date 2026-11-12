@@ -18,7 +18,10 @@ def update_assignments(data, centroids):
     Resolve equal-distance ties consistently and document your rule.
     """
     # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    import numpy as np
+    # tie-break: smallest centroid index
+    sq = ((data[:, None, :] - centroids[None, :, :]) ** 2).sum(axis=2)
+    return np.argmin(sq, axis=1)
 
 
 def update_centroids(data, centroids, assignments):
@@ -29,7 +32,15 @@ def update_centroids(data, centroids, assignments):
     """
     # TODO: Update the centroid of each nonempty cluster.
     # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    import numpy as np
+    k = centroids.shape[0]
+    updated = centroids.copy()
+    for cid in range(k):
+        cluster_pts = data[assignments == cid]
+        if len(cluster_pts) == 0:
+            continue  # empty -> leave old center
+        updated[cid] = cluster_pts.mean(axis=0)
+    return updated
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -66,7 +77,33 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     # TODO: Run kmeans for every value in K_VALUES.
     # TODO: Plot each set of cluster assignments and its final centroids.
     # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    X, truth = make_toy_data()
+    rng = np.random.default_rng(seed)
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(X[:, 0], X[:, 1], c=truth, s=4, cmap="tab10")
+    ax.set_title("reference: true labels")
+    fig.tight_layout()
+    fig.savefig(output_dir / "reference_true_labels.png", dpi=150)
+    plt.close(fig)
+
+    for k in K_VALUES:
+        start_cents = get_initial_clusters(k, X, rng)
+        cents, labels = kmeans(X, start_cents, max_iterations=max_iterations)
+        fig, ax = plt.subplots(figsize=(6, 5))
+        ax.scatter(X[:, 0], X[:, 1], c=labels, s=4, cmap="tab10")
+        ax.scatter(cents[:, 0], cents[:, 1], c="black", marker="x", s=80)
+        ax.set_title(f"k={k}")
+        fig.tight_layout()
+        fig.savefig(output_dir / f"kmeans_k{k}.png", dpi=150)
+        plt.close(fig)
+        print(f"saved k={k}")
 
 
 def main():
