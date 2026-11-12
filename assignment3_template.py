@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import numpy as np
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -51,8 +52,9 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # I chose the points labeled 1, 5, and 6 as my support vectors because they are the
+    # three points closest to the decision boundary that splits the two groups of points apart. 
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,10 +66,14 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
-
+    # see write-up for how the weights and bias were derived.
+    weights = (2, 2)
+    bias = -3
+    # determine the geometric margin and state its meaning
+    geometric_margin = 1 / np.linalg.norm(weights)
+    # the geometric margin is the euclidean distance between the cloeset point on the
+    # maximum-margin separating line and the support vectors.
+    return (weights, bias, geometric_margin)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

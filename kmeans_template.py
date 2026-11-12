@@ -5,6 +5,8 @@ Implement the two update functions from scratch, then complete the experiment.
 
 import argparse
 from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
 
 K_VALUES = (2, 3, 4, 6, 10)
 
@@ -17,8 +19,10 @@ def update_assignments(data, centroids):
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # calculate the euclidean distances of each data point from every centroid
+    distances = np.sum((data[:, np.newaxis, :] - centroids[np.newaxis, :, :]) ** 2, axis=2)
+    # return the centroid with the lowest distance for every data point
+    return np.argmin(distances, axis=1)
 
 
 def update_centroids(data, centroids, assignments):
@@ -27,9 +31,20 @@ def update_centroids(data, centroids, assignments):
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    # create a copy of the original centroids
+    centroids_copy = centroids.copy()
+
+    for j in range(len(centroids)):
+        # find the points that belong to this centroid
+        cluster_points = data[assignments == j]
+
+        # calculate the mean
+        if len(cluster_points) > 0:
+            centroids_copy[j] = np.mean(cluster_points, axis=0)
+        # centroids with no data points retain their previous centroid in the copy
+
+    # return the updated centroids
+    return centroids_copy
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,11 +77,43 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    # set up the output directory
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # load toy data, create a seeded RNG, and initialize centroids.
+    data, true_labels = make_toy_data()
+    rng = np.random.default_rng(seed)
+
+    # run kmeans for every value in K_VALUES.
+    for k in K_VALUES:
+        initial_centroids = get_initial_clusters(k, data, rng)
+
+        centroids, assignments = kmeans(
+            data, initial_centroids, max_iterations
+        )
+
+        plt.figure(figsize=(8, 6))
+
+        plt.scatter(
+            data[:, 0], data[:, 1],
+            c=assignments, cmap="tab10",
+            s=8, alpha=0.6
+        )
+
+        plt.scatter(
+            centroids[:, 0], centroids[:, 1],
+            c="black", marker="X",
+            s=180, label="Centroids"
+        )
+        # plot each set of cluster assignments and its final centroids.
+        plt.title(f"K-means clustering (k={k})")
+        plt.xlabel("Feature 1")
+        plt.ylabel("Feature 2")
+        plt.legend()
+        # save plots under output_dir and discuss the effect of k.
+        plt.savefig(output_dir / f"kmeans_k{k}.png", dpi=150)
+        plt.close()
 
 
 def main():
