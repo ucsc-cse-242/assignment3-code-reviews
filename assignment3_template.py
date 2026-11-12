@@ -51,9 +51,9 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
 
+    # Points 1, 5, and 6 are closest to the separating boundary.
+    return [1, 5, 6]
 
 def derive_svm_separator():
     """Q1(b), 10 points for the boundary and 10 for the geometric margin.
@@ -64,9 +64,14 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+
+    # See PDF for mathematical derivation
+    w1 = 2
+    w2 = 2
+    b = -3
+    geometric_margin = 1 / (w1**2 + w2**2)**0.5
+
+    return (w1, w2), b, geometric_margin
 
 
 def main():
