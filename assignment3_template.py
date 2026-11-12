@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import numpy as np
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -52,8 +53,7 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
-
+    return [1, 5, 6]
 
 def derive_svm_separator():
     """Q1(b), 10 points for the boundary and 10 for the geometric margin.
@@ -65,8 +65,13 @@ def derive_svm_separator():
     Explain the derivation and your margin convention in the written report.
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
+    w = np.array([2.0, 2.0])
+    b = -3
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    margin = 1 / np.linalg.norm(w)
+    
+    # extra: width = 2 * margin
+    return w, b, margin
 
 
 def main():
