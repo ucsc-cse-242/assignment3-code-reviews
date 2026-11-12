@@ -52,7 +52,15 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # see attached png for full breakdown    
+
+
+    # The support vectors would be piints 1, 5, and 6. The definition of these vectors are the points in a SVM that are the closest to the decision boundary. 
+    # Here, we can see that the classes are separated along the diagonal direction (1,1). You can also see that the classes cluster, the positives are in the upper right, 
+    # whereas the negatives are in the lower left. The closest points to that decision boundary are points 1, 5, and 6. 
+    # The other points (2, 3, and 4) are further away from this boundary, meaning that moving them wouldn't change the decision boundary, thus making them not support vectors.
+    
+    return [1,5,6]
 
 
 def derive_svm_separator():
@@ -65,8 +73,17 @@ def derive_svm_separator():
     Explain the derivation and your margin convention in the written report.
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
+    # see attached png for full breakdown
+
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import math
+    w2 = 1.0-(-1.0)
+    w1 = w2
+    b = -1.0 - w1
+    weights = (w1,w2)
+
+    geometric_margin = 1.0/math.hypot(*weights)
+    return weights, b, geometric_margin
 
 
 def main():
@@ -87,3 +104,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+#AI usage: I used Claude for explaining concepts, optimizing code, bettering my commented explanations
