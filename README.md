@@ -58,7 +58,7 @@ Keep the generated training and test sets fixed, repeat label corruption and tra
 
 **(b) K-NN label repair — 20 points.** Complete `repair_labels_knn()` and the comparison portion of `run_comparison()`. For each training point:
 
-1. Find its **five nearest other training points** using Euclidean distance.
+1. Find its **five nearest other training points** `using` Euclidean distance.
 2. Replace its label with the majority of those neighbors' noisy labels.
 3. Compute every repaired label from the same original noisy-label array, rather than modifying labels sequentially.
 
@@ -102,4 +102,3 @@ All three scripts support `--help`. Solution modes intentionally raise `NotImple
 - A PDF write-up with the SVM derivation and margin, K-means plots and discussion, and the two-method accuracy comparison.
 - The experiment CSV.
 - Acknowledgment of outside help, e.g., generative AI transcript.
-
