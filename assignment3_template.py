@@ -2,7 +2,10 @@
 """
 
 import argparse
+from itertools import combinations
 from pathlib import Path
+
+import numpy as np
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -46,16 +49,39 @@ def plot_svm_data(output_path):
     return output_path
 
 
-def identify_support_vectors():
+def identify_support_vectors(x_data=None, y_data=None):
     """Q1(a), 10 points together with the plot: identify support vectors by eye.
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    x = np.asarray(SVM_X if x_data is None else x_data, dtype=float)
+    y = np.asarray(SVM_Y if y_data is None else y_data, dtype=float)
+    if x.ndim != 2 or y.shape != (x.shape[0],):
+        raise ValueError("x_data must be 2D and y_data must match its rows.")
+    if not np.all(np.isin(y, (-1, 1))):
+        raise ValueError("Labels must be -1 or +1.")
+
+    candidates = []
+    for active_indices in combinations(range(len(x)), x.shape[1] + 1):
+        design = np.column_stack((x[list(active_indices)], np.ones(x.shape[1] + 1)))
+        try:
+            solution = np.linalg.solve(design, y[list(active_indices)])
+        except np.linalg.LinAlgError:
+            continue
+        weights, bias = solution[:-1], solution[-1]
+        signed_distances = y * (x @ weights + bias)
+        if np.all(signed_distances >= 1.0 - 1e-10):
+            candidates.append((np.linalg.norm(weights), weights, bias))
+    if not candidates:
+        raise ValueError("The training data is not linearly separable.")
+
+    _, weights, bias = min(candidates, key=lambda candidate: candidate[0])
+    signed_distances = y * (x @ weights + bias)
+    support_indices = np.flatnonzero(np.isclose(signed_distances, 1.0, atol=1e-10))
+    return tuple(int(index + 1) for index in support_indices)
 
 
-def derive_svm_separator():
+def derive_svm_separator(x_data=None, y_data=None):
     """Q1(b), 10 points for the boundary and 10 for the geometric margin.
 
     Use a linear, hard-margin SVM. The decision boundary is w dot x + b = 0;
@@ -64,9 +90,34 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    x = np.asarray(SVM_X if x_data is None else x_data, dtype=float)
+    y = np.asarray(SVM_Y if y_data is None else y_data, dtype=float)
+    if x.ndim != 2 or y.shape != (x.shape[0],):
+        raise ValueError("x_data must be 2D and y_data must match its rows.")
+    if not np.all(np.isin(y, (-1, 1))):
+        raise ValueError("Labels must be -1 or +1.")
+
+    # At the optimum, d + 1 active constraints determine d weights and b.
+    candidates = []
+    active_count = x.shape[1] + 1
+    for active_indices in combinations(range(len(x)), active_count):
+        design = np.column_stack((x[list(active_indices)], np.ones(active_count)))
+        try:
+            solution = np.linalg.solve(design, y[list(active_indices)])
+        except np.linalg.LinAlgError:
+            continue
+
+        weights, bias = solution[:-1], solution[-1]
+        signed_distances = y * (x @ weights + bias)
+        if np.all(signed_distances >= 1.0 - 1e-10):
+            candidates.append((np.linalg.norm(weights), weights, bias))
+
+    if not candidates:
+        raise ValueError("The training data is not linearly separable.")
+
+    _, weights, bias = min(candidates, key=lambda candidate: candidate[0])
+    geometric_margin = 1.0 / np.linalg.norm(weights)
+    return tuple(float(weight) for weight in weights), float(bias), float(geometric_margin)
 
 
 def main():
