@@ -12,14 +12,14 @@
 
 Use the following two-feature training set:
 
-| Point ID | x1 | x2 | y |
-| --- | --- | --- | --- |
-| 1 | 1 | 1 | +1 |
-| 2 | 1 | 2 | +1 |
-| 3 | 2 | 1 | +1 |
-| 4 | 0 | 0 | -1 |
-| 5 | 1 | 0 | -1 |
-| 6 | 0 | 1 | -1 |
+| Point ID | x1  | x2  | y   |
+| -------- | --- | --- | --- |
+| 1        | 1   | 1   | +1  |
+| 2        | 1   | 2   | +1  |
+| 3        | 2   | 1   | +1  |
+| 4        | 0   | 0   | -1  |
+| 5        | 1   | 0   | -1  |
+| 6        | 0   | 1   | -1  |
 
 **(a) Plot and support vectors — 10 points.** Plot the data by hand or with Python and identify all support vectors by eye. Explain your selection. The plotting helper in `assignment3_template.py` labels the points for you.
 
@@ -102,4 +102,3 @@ All three scripts support `--help`. Solution modes intentionally raise `NotImple
 - A PDF write-up with the SVM derivation and margin, K-means plots and discussion, and the two-method accuracy comparison.
 - The experiment CSV.
 - Acknowledgment of outside help, e.g., generative AI transcript.
-
