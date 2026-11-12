@@ -1,10 +1,17 @@
 """Question 3: noisy-label SVM and K-NN repair (40 points).
 
-Complete the TODOs. Keep test labels clean and use them only for evaluation.
+Name: Astra Tsai
+Student ID: 2000926
+
+Keep test labels clean and use them only for evaluation.
+AI assistance: OpenAI Codex helped implement and check this solution.
 """
 
 import argparse
+import csv
 from pathlib import Path
+
+import numpy as np
 
 SVM_C = 1.0
 SVM_GAMMA = 0.01
@@ -35,8 +42,11 @@ def corrupt_training_labels(clean_labels, rng):
     flipped in one direction to be flipped again by the other rule.
     Return a new array, leaving clean_labels unchanged.
     """
-    # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    clean_labels = np.asarray(clean_labels)
+    probabilities = np.where(clean_labels == 1, POSITIVE_FLIP_PROBABILITY,
+                             NEGATIVE_FLIP_PROBABILITY)
+    flips = rng.random(clean_labels.shape) < probabilities
+    return np.where(flips, -clean_labels, clean_labels)
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -49,9 +59,23 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     the original noisy labels, so row ordering does not affect the outcome.
     sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
     """
-    # TODO: Find neighbors using training features only.
-    # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    train_features = np.asarray(train_features, dtype=float)
+    noisy_labels = np.asarray(noisy_labels)
+    if neighbors != 5:
+        raise ValueError("This assignment requires exactly five neighbors")
+    if len(train_features) <= neighbors:
+        raise ValueError("At least six training points are required")
+    # Full pairwise distances are inexpensive for the required 2,000 rows.
+    # Squaring preserves the Euclidean ordering; exclude self by row index,
+    # rather than discarding all zero distances (duplicates are valid others).
+    distances = np.sum(
+        (train_features[:, None, :] - train_features[None, :, :]) ** 2, axis=2
+    )
+    np.fill_diagonal(distances, np.inf)
+    # Stable sorting breaks equal-distance ties by the original row index.
+    nearest = np.argsort(distances, axis=1, kind="stable")[:, :neighbors]
+    votes = noisy_labels[nearest].sum(axis=1)
+    return np.where(votes > 0, 1, -1)
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -71,13 +95,40 @@ def run_comparison(repeats, seed, neighbors, output_path):
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
-    # TODO: Generate independent clean training and test splits.
-    # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
-    # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    if repeats < 1:
+        raise ValueError("repeats must be positive")
+    if neighbors != 5:
+        raise ValueError("This assignment requires exactly five neighbors")
+    rng = np.random.default_rng(seed)
+    train_features, clean_train_labels = generate_clean_split(rng)
+    test_features, test_labels = generate_clean_split(rng)
+    rows = []
+    for trial in range(1, repeats + 1):
+        noisy_labels = corrupt_training_labels(clean_train_labels, rng)
+        baseline = train_and_evaluate(train_features, noisy_labels,
+                                      test_features, test_labels)
+        repaired_labels = repair_labels_knn(train_features, noisy_labels, neighbors)
+        repaired = train_and_evaluate(train_features, repaired_labels,
+                                      test_features, test_labels)
+        rows.append(dict(trial=trial, baseline_accuracy=baseline,
+                         knn_accuracy=repaired))
+        print(f"Trial {trial:02d}: baseline={baseline:.4f}, K-NN={repaired:.4f}")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=(
+            "trial", "baseline_accuracy", "knn_accuracy"))
+        writer.writeheader()
+        writer.writerows(rows)
+    baseline_mean = np.mean([row["baseline_accuracy"] for row in rows])
+    knn_mean = np.mean([row["knn_accuracy"] for row in rows])
+    print(f"Mean baseline accuracy: {baseline_mean:.6f} ({100*baseline_mean:.4f}%)")
+    print(f"Mean K-NN accuracy:     {knn_mean:.6f} ({100*knn_mean:.4f}%)")
+    print(f"K-NN minus baseline:   {knn_mean-baseline_mean:+.6f} "
+          f"({100*(knn_mean-baseline_mean):+.4f} percentage points)")
+    print(f"Saved {output_path}")
+    return rows
 
 
 def main():

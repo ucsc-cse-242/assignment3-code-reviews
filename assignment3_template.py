@@ -1,4 +1,9 @@
 """CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
+
+Name: Astra Tsai
+Student ID: 2000926
+
+AI assistance: OpenAI Codex helped implement and check this solution.
 """
 
 import argparse
@@ -12,8 +17,8 @@ SVM_Y = (1, 1, 1, -1, -1, -1)
 def plot_svm_data(output_path):
     """Generate an annotated scatter plot to help inspect Q1(a) by eye.
 
-    Point IDs are 1-based and match the source table order. This helper
-    does not identify support vectors or draw the separating boundary.
+    Point IDs are 1-based and match the source table order. The completed
+    solution also shows the separator, supporting lines, and support vectors.
     """
     try:
         import matplotlib.pyplot as plt
@@ -33,6 +38,16 @@ def plot_svm_data(output_path):
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
         ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
                     textcoords="offset points")
+    support = [SVM_X[i - 1] for i in identify_support_vectors()]
+    ax.scatter([x[0] for x in support], [x[1] for x in support],
+               s=210, facecolors="none", edgecolors="black", linewidths=1.4,
+               label="Support vectors")
+    x_limits = (-0.5, 2.5)
+    for total, style, label in ((1.5, "-", "Boundary: x1 + x2 = 1.5"),
+                                (1, "--", "Supporting lines"),
+                                (2, "--", None)):
+        ax.plot(x_limits, [total - x for x in x_limits], style,
+                color="black", linewidth=1.2, label=label)
     ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
            xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
     ax.set_aspect("equal", adjustable="box")
@@ -51,8 +66,8 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # The closest parallel supporting lines are x1 + x2 = 2 and = 1.
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,9 +79,11 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    from math import sqrt
+
+    # Canonical support constraints: w1+w2+b=1, w1+b=-1, w2+b=-1.
+    # Solving yields w=(2, 2), b=-3; margin = 1/||w||.
+    return (2.0, 2.0), -3.0, 1.0 / sqrt(8.0)
 
 
 def main():
