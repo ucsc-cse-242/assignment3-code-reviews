@@ -52,8 +52,11 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
-
+    #raise NotImplementedError("Identify and justify the support vectors.")
+    # Points 5 (1,0) and 6 (0,1) lie on x1 + x2 = 1 (closest negatives);
+    # point 1 (1,1) lies on x1 + x2 = 2 (closest positive).
+    # Points 2, 3, 4 lie farther from the gap and do not constrain the boundary.
+    return [1, 5, 6]
 
 def derive_svm_separator():
     """Q1(b), 10 points for the boundary and 10 for the geometric margin.
@@ -66,7 +69,19 @@ def derive_svm_separator():
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    #raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+        # Hard-margin conditions on the support vectors:
+    #   point 1 (1,1), y=+1: w1 + w2 + b = +1
+    #   point 5 (1,0), y=-1: w1 + b      = -1
+    #   point 6 (0,1), y=-1: w2 + b      = -1
+    # => w1 = w2 = 2, b = -3; boundary 2x1 + 2x2 - 3 = 0, i.e. x1 + x2 = 1.5
+    # Geometric margin = distance from boundary to closest points = 1/||w||
+    #   = 1/(2*sqrt(2)) = sqrt(2)/4 ~ 0.3536  (full width 2/||w|| ~ 0.7071)
+    import math
+    weights = (2.0, 2.0)
+    bias = -3.0
+    geometric_margin = 1.0 / math.hypot(*weights)
+    return weights, bias, geometric_margin
 
 
 def main():

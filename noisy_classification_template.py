@@ -36,7 +36,17 @@ def corrupt_training_labels(clean_labels, rng):
     Return a new array, leaving clean_labels unchanged.
     """
     # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    #raise NotImplementedError("Implement asymmetric training-label noise.")
+    import numpy as np
+    clean_labels = np.asarray(clean_labels)
+    # Flip probability chosen from the ORIGINAL label: +1 -> 0.35, -1 -> 0.20
+    flip_prob = np.where(clean_labels == 1,
+                         POSITIVE_FLIP_PROBABILITY, NEGATIVE_FLIP_PROBABILITY)
+    # One uniform draw per example, so each example is flipped at most once
+    flip = rng.random(clean_labels.shape[0]) < flip_prob
+    noisy = clean_labels.copy()        # leave clean_labels unchanged
+    noisy[flip] = -noisy[flip]
+    return noisy
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -51,7 +61,20 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     """
     # TODO: Find neighbors using training features only.
     # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    #raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    import numpy as np
+    X = np.asarray(train_features, dtype=float)
+    noisy = np.asarray(noisy_labels)
+    # Pairwise squared Euclidean distances between training points (n x n)
+    sq = np.sum(X ** 2, axis=1)
+    dist = sq[:, None] + sq[None, :] - 2.0 * X @ X.T
+    # Exclude each point from its own neighborhood
+    np.fill_diagonal(dist, np.inf)
+    # Stable sort: equal-distance ties are broken by the lower row index
+    nn_idx = np.argsort(dist, axis=1, kind="stable")[:, :neighbors]
+    # Majority vote of the neighbors' ORIGINAL noisy labels (5 votes cannot tie)
+    votes = noisy[nn_idx].sum(axis=1)
+    return np.where(votes > 0, 1, -1)
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -77,7 +100,44 @@ def run_comparison(repeats, seed, neighbors, output_path):
     # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
     # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
     # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    #raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    import csv
+    import numpy as np
+    rng = np.random.default_rng(seed)
+
+    # Independent clean training and test sets, generated once and kept fixed
+    train_X, train_y = generate_clean_split(rng)
+    test_X, test_y = generate_clean_split(rng)
+
+    rows = []
+    for trial in range(1, repeats + 1):
+        noisy_y = corrupt_training_labels(train_y, rng)
+
+        # (a) Baseline: SVM trained on noisy labels
+        baseline_acc = train_and_evaluate(train_X, noisy_y, test_X, test_y)
+
+        # (b) K-NN repair of the SAME noisy labels, then a fresh SVM
+        repaired_y = repair_labels_knn(train_X, noisy_y, neighbors)
+        knn_acc = train_and_evaluate(train_X, repaired_y, test_X, test_y)
+
+        rows.append({"trial": trial,
+                     "baseline_accuracy": baseline_acc,
+                     "knn_accuracy": knn_acc})
+        print(f"trial {trial:2d}: baseline={baseline_acc:.4f}  knn={knn_acc:.4f}")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["trial", "baseline_accuracy", "knn_accuracy"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+    mean_base = np.mean([r["baseline_accuracy"] for r in rows])
+    mean_knn = np.mean([r["knn_accuracy"] for r in rows])
+    print(f"Mean baseline accuracy:    {mean_base:.4f}")
+    print(f"Mean K-NN repair accuracy: {mean_knn:.4f}")
+    print(f"Difference (knn - baseline): {mean_knn - mean_base:+.4f}")
+    print(f"Saved per-trial results to {output_path}")
 
 
 def main():
