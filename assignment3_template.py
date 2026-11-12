@@ -1,8 +1,11 @@
-"""CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
+"""
+CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
 """
 
 import argparse
 from pathlib import Path
+
+import numpy as np
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -51,8 +54,7 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -64,9 +66,13 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    sv_points = np.array([(1, 1), (1, 0), (0, 1)], dtype=float)
+    sv_labels = np.array([1, -1, -1])
+    alphas = np.array([4.0, 2.0, 2.0])
+    weights = (alphas * sv_labels) @ sv_points
+    bias = 1 - weights @ sv_points[0]
+    geometric_margin = 1 / np.linalg.norm(weights)
+    return (float(weights[0]), float(weights[1])), float(bias), float(geometric_margin)
 
 
 def main():
