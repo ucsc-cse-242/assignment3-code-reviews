@@ -1,4 +1,14 @@
 """CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
+
+Student: Kangan Qian (SID 2346765)
+
+Solution summary (full derivation in the written report):
+- Support vectors: points 1 (1,1), 5 (1,0), 6 (0,1). They are the only points
+  at distance sqrt(2)/4 from the optimal boundary; every other point is at
+  distance 3*sqrt(2)/4, strictly greater.
+- Optimal separator (canonical scaling): w = (2, 2), b = -3, i.e. the line
+  2*x1 + 2*x2 - 3 = 0, or x1 + x2 = 1.5.
+- Geometric margin (boundary -> closest points): 1/||w|| = sqrt(2)/4 ≈ 0.3536.
 """
 
 import argparse
@@ -51,8 +61,18 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Reading the plot, the two classes are separated with the largest gap
+    # along the diagonal direction x1 + x2. The margin strip of the optimal
+    # boundary x1 + x2 = 1.5 runs between the lines x1 + x2 = 1 and
+    # x1 + x2 = 2. Exactly three points touch that strip:
+    #   point 1 (1, 1): x1 + x2 = 2 (closest positive point to the boundary),
+    #   point 5 (1, 0): x1 + x2 = 1 (closest negative point),
+    #   point 6 (0, 1): x1 + x2 = 1 (closest negative point).
+    # Points 2 (1,2) and 3 (2,1) have x1 + x2 = 3 and point 4 (0,0) has
+    # x1 + x2 = 0: all three sit strictly outside the margin strip, so none
+    # of them can pin down the boundary (removing them would not move the
+    # optimum). Hence the support vectors are points 1, 5 and 6.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -64,9 +84,40 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import numpy as np
+
+    # By symmetry of the point set about the line x1 = x2 (swapping the two
+    # coordinates maps positives to positives and negatives to negatives),
+    # the maximum-margin boundary must be invariant under that swap, so it
+    # has the form w1 = w2. The remaining unknown is the scale of w and the
+    # intercept; fix the scale with the SVM convention that the support
+    # vectors lie exactly on the supporting hyperplanes y (w . x + b) = 1.
+    # That gives three linear equations in (w1, w2, b):
+    #   point 1 (1, 1), y = +1:  w1 + w2 + b =  1
+    #   point 5 (1, 0), y = -1:   w1      + b = -1
+    #   point 6 (0, 1), y = -1:        w2 + b = -1
+    equations = np.array(
+        [[1.0, 1.0, 1.0],   # coefficients of (w1, w2, b) for point 1
+         [1.0, 0.0, 1.0],   # coefficients of (w1, w2, b) for point 5
+         [0.0, 1.0, 1.0]]   # coefficients of (w1, w2, b) for point 6
+    )
+    targets = np.array([1.0, -1.0, -1.0])
+    w1, w2, b = np.linalg.solve(equations, targets)
+    weights = (float(w1), float(w2))
+
+    # Sanity check: every training point must satisfy the hard-margin
+    # constraint y (w . x + b) >= 1. Points on the wrong side or inside the
+    # margin would mean the support-vector choice was wrong.
+    margins = [y * (weights[0] * x1 + weights[1] * x2 + b)
+               for (x1, x2), y in zip(SVM_X, SVM_Y)]
+    if min(margins) < 1.0 - 1e-9:
+        raise ValueError("Candidate separator violates a hard-margin constraint")
+
+    # Geometric margin: the distance from the boundary w . x + b = 0 to the
+    # closest training points (the support vectors, where the functional
+    # margin equals 1) is 1 / ||w||. With w = (2, 2) this is 1 / (2*sqrt(2)).
+    geometric_margin = 1.0 / float(np.hypot(w1, w2))
+    return weights, float(b), geometric_margin
 
 
 def main():
