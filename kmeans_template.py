@@ -1,10 +1,16 @@
 """Question 2: K-means (30 points), adapted from Assignment 4, Question 2.
 
+Name: Astra Tsai
+Student ID: 2000926
+
 Implement the two update functions from scratch, then complete the experiment.
+AI assistance: OpenAI Codex helped implement and check this solution.
 """
 
 import argparse
 from pathlib import Path
+
+import numpy as np
 
 K_VALUES = (2, 3, 4, 6, 10)
 
@@ -17,8 +23,13 @@ def update_assignments(data, centroids):
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+    # Squared Euclidean distance has the same minimizer as distance.
+    # argmin chooses the smallest centroid index in an exact distance tie.
+    squared_distances = np.sum(
+        (np.asarray(data)[:, None, :] - np.asarray(centroids)[None, :, :]) ** 2,
+        axis=2,
+    )
+    return np.argmin(squared_distances, axis=1)
 
 
 def update_centroids(data, centroids, assignments):
@@ -27,9 +38,16 @@ def update_centroids(data, centroids, assignments):
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+    data = np.asarray(data)
+    assignments = np.asarray(assignments)
+    # Floating output avoids truncating means when initial rows are integers.
+    updated = np.array(centroids, dtype=float, copy=True)
+    for cluster in range(len(updated)):
+        members = data[assignments == cluster]
+        if len(members):
+            updated[cluster] = members.mean(axis=0)
+        # Otherwise retain the previous centroid, including duplicate starts.
+    return updated
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,11 +80,37 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    import matplotlib.pyplot as plt
+
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be positive")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    data, _ = make_toy_data()
+    rng = np.random.default_rng(seed)
+    results = {}
+    for k in K_VALUES:
+        initial = get_initial_clusters(k, data, rng)
+        centroids, assignments = kmeans(data, initial, max_iterations)
+        inertia = float(np.sum((data - centroids[assignments]) ** 2))
+        fig, ax = plt.subplots(figsize=(5.6, 4.3))
+        ax.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10",
+                   vmin=-0.5, vmax=9.5, s=5, alpha=0.65, linewidths=0)
+        ax.scatter(centroids[:, 0], centroids[:, 1], marker="X", s=150,
+                   c="black", edgecolors="white", linewidths=1,
+                   label="Final centroids", zorder=3)
+        ax.set(xlabel="x1", ylabel="x2", title=f"K-means: k = {k}",
+               xlim=(data[:, 0].min() - 0.3, data[:, 0].max() + 0.3),
+               ylim=(data[:, 1].min() - 0.3, data[:, 1].max() + 0.3))
+        ax.set_aspect("equal", adjustable="box")
+        ax.legend(loc="upper right", fontsize=8)
+        fig.tight_layout()
+        path = output_dir / f"kmeans_k{k}.png"
+        fig.savefig(path, dpi=180)
+        plt.close(fig)
+        results[k] = (centroids, assignments)
+        print(f"k={k}: inertia={inertia:.6f}; saved {path}")
+    return results
 
 
 def main():
