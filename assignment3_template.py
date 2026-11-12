@@ -51,8 +51,12 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Inspect the plot and identify all support vectors.
+    # Positives (1, 2) and (2, 1) have x1 + x2 = 3, but (1, 1) has 2, so it is
+    # the positive point closest to the negatives. Negatives (1, 0) and (0, 1)
+    # have x1 + x2 = 1 and (0, 0) has 0, so (1, 0) and (0, 1) are the closest
+    # negatives. These three points lie on the margin lines.
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,9 +68,22 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # Support vectors (1-based IDs 1, 5, 6): positive (1, 1), negatives (1, 0)
+    # and (0, 1). In canonical form each satisfies y_i (w . x_i + b) = 1:
+    #   (1, 1) -> w1 + w2 + b = +1
+    #   (1, 0) -> w1      + b = -1
+    #   (0, 1) ->      w2 + b = -1
+    # Subtracting the 3rd from the 1st gives w1 = 2; the 2nd from the 1st
+    # gives w2 = 2; then b = -1 - w1 = -3.
+    # Boundary: 2 x1 + 2 x2 - 3 = 0, i.e. x1 + x2 = 1.5.
+    w1, w2, b = 2.0, 2.0, -3.0
+
+    # Geometric margin: distance from the boundary to the nearest training
+    # point (any support vector), 1 / ||w|| = 1 / (2 sqrt 2) = sqrt(2) / 4
+    # ~ 0.354. The full width between the two margin lines is 2 / ||w|| ~ 0.707.
+    geometric_margin = 1.0 / (w1 ** 2 + w2 ** 2) ** 0.5
+
+    return (w1, w2), b, geometric_margin
 
 
 def main():
