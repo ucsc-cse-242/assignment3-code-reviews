@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import numpy as np
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -51,8 +52,11 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Making sure that the result is not dependent on where its ran it from
+    plot_svm_data(Path(__file__).resolve().parent / "figures" / "q1a.png")
+
+    # Derivation and explanation: see writeup.pdf, Question 1(a).
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,9 +68,27 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    sv_ids = identify_support_vectors()  # (1, 5, 6)
+
+    # one equation per support vector: y * (w1*x1 + w2*x2 + b) = 1
+    # rewritten as: (y*x1)*w1 + (y*x2)*w2 + y*b = 1
+    A = np.array([[SVM_Y[i - 1] * SVM_X[i - 1][0],
+                   SVM_Y[i - 1] * SVM_X[i - 1][1],
+                   SVM_Y[i - 1]] for i in sv_ids], dtype=float)
+    rhs = np.ones(len(sv_ids))
+
+    # solve the 3 equations for w1, w2, b  ->  w = (2, 2), b = -3
+    w1, w2, b = np.linalg.solve(A, rhs)
+    w = np.array([w1, w2])
+
+    # geometric margin = 1 / ||w|| = 1 / sqrt(8) ≈ 0.3536
+    margin = 1 / np.linalg.norm(w)
+
+    # sanity check: y * (w . x + b) >= 1 for every training point
+    for x, y in zip(SVM_X, SVM_Y):
+        assert y * (w @ np.array(x) + b) >= 1 - 1e-9
+
+    return (float(w1), float(w2)), float(b), float(margin)
 
 
 def main():
