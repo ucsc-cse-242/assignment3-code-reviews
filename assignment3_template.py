@@ -52,7 +52,12 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # The positive hull is the triangle (1,1), (1,2), (2,1); the negative hull
+    # is the triangle (0,0), (1,0), (0,1). The closest the hulls come is from
+    # point 1 (1,1) to the negative edge joining point 5 (1,0) and point 6
+    # (0,1), so those three points sit on the margin. Points 2, 3, and 4 lie
+    # strictly farther from the boundary.
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -65,8 +70,29 @@ def derive_svm_separator():
     Explain the derivation and your margin convention in the written report.
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
+    # Every support vector satisfies the canonical constraint y_i (w.x_i + b) = 1,
+    # i.e. w.x_i + b = y_i. With three support vectors this is a 3x3 system:
+    #   point 1 (1,1), y=+1:  w1 + w2 + b = +1
+    #   point 5 (1,0), y=-1:  w1      + b = -1
+    #   point 6 (0,1), y=-1:       w2 + b = -1
+    # Subtracting gives w2 = 2 and w1 = 2, then b = -3: 2 x1 + 2 x2 - 3 = 0,
+    # equivalently x1 + x2 = 1.5.
+    import numpy as np
+    sv_ids = identify_support_vectors()
+    rows = [(*SVM_X[i - 1], 1) for i in sv_ids]
+    targets = [SVM_Y[i - 1] for i in sv_ids]
+    w1, w2, b = np.linalg.solve(np.array(rows, dtype=float),
+                                np.array(targets, dtype=float))
+    weights = (float(w1), float(w2))
+    bias = float(b)
+
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # Geometric margin = distance from the boundary to the closest training
+    # points = 1 / ||w|| = 1 / (2 sqrt(2)) = sqrt(2) / 4 ~ 0.354.
+    # The full width between w.x + b = +1 and w.x + b = -1 is 2 / ||w||
+    # = 1 / sqrt(2) ~ 0.707.
+    geometric_margin = float(1.0 / np.linalg.norm(weights))
+    return weights, bias, geometric_margin
 
 
 def main():
