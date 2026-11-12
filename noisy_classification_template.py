@@ -4,6 +4,8 @@ Complete the TODOs. Keep test labels clean and use them only for evaluation.
 """
 
 import argparse
+
+import numpy as np
 from pathlib import Path
 
 SVM_C = 1.0
@@ -35,8 +37,11 @@ def corrupt_training_labels(clean_labels, rng):
     flipped in one direction to be flipped again by the other rule.
     Return a new array, leaving clean_labels unchanged.
     """
-    # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    # One random draw per example, so each label is flipped at most once.
+    flip_prob = np.where(clean_labels == 1, POSITIVE_FLIP_PROBABILITY,
+                         NEGATIVE_FLIP_PROBABILITY)
+    flips = rng.random(len(clean_labels)) < flip_prob
+    return np.where(flips, -clean_labels, clean_labels)
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -49,9 +54,18 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     the original noisy labels, so row ordering does not affect the outcome.
     sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
     """
-    # TODO: Find neighbors using training features only.
-    # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    from sklearn.neighbors import NearestNeighbors
+
+    # Use 5 neighbors. Search for 5 + 1 because each point's closest match is
+    # itself; dropping that first column leaves the 5 nearest OTHER points.
+    nn = NearestNeighbors(n_neighbors=neighbors + 1, algorithm="brute")
+    nn.fit(train_features)
+    _, idx = nn.kneighbors(train_features)
+    neighbor_idx = idx[:, 1:]
+
+    # Majority vote using the original noisy labels. 5 votes of +/-1 never tie.
+    votes = noisy_labels[neighbor_idx].sum(axis=1)
+    return np.where(votes > 0, 1, -1)
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -71,13 +85,37 @@ def run_comparison(repeats, seed, neighbors, output_path):
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
-    # TODO: Generate independent clean training and test splits.
-    # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
-    # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    import csv
+
+    rng = np.random.default_rng(seed)
+    # Make the train and test sets once and keep them fixed.
+    train_x, train_y = generate_clean_split(rng)
+    test_x, test_y = generate_clean_split(rng)
+
+    rows = []
+    for trial in range(1, repeats + 1):
+        # (a) Baseline: train on noisy labels.
+        noisy_y = corrupt_training_labels(train_y, rng)
+        baseline_acc = train_and_evaluate(train_x, noisy_y, test_x, test_y)
+
+        # (b) Fix the same noisy labels with K-NN, then train again.
+        repaired_y = repair_labels_knn(train_x, noisy_y, neighbors)
+        knn_acc = train_and_evaluate(train_x, repaired_y, test_x, test_y)
+
+        rows.append([trial, round(baseline_acc, 4), round(knn_acc, 4)])
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["trial", "baseline_accuracy", "knn_accuracy"])
+        writer.writerows(rows)
+
+    baseline_mean = np.mean([r[1] for r in rows])
+    knn_mean = np.mean([r[2] for r in rows])
+    print(f"Mean baseline accuracy: {baseline_mean:.4f}")
+    print(f"Mean K-NN accuracy:     {knn_mean:.4f}")
+    print(f"Difference:             {knn_mean - baseline_mean:+.4f}")
 
 
 def main():
@@ -94,3 +132,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
