@@ -30,9 +30,11 @@ def plot_svm_data(output_path):
             [x[0] for x in points], [x[1] for x in points],
             color=color, marker=marker, s=90, label=f"y = {label:+d}",
         )
+
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
         ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
                     textcoords="offset points")
+
     ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
            xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
     ax.set_aspect("equal", adjustable="box")
@@ -50,9 +52,12 @@ def identify_support_vectors():
     """Q1(a), 10 points together with the plot: identify support vectors by eye.
 
     Return their 1-based point IDs and explain your choice in the report.
+
+    The closes points are between point 1 (1, 1) and  point 5 (1, 0), and point 1 and point 6 (0, 1), at its midpoint
+    (0.5, 0.5). Point 1 is equidistant from points 5 and 6, so all three lie
+    on the margin. Points 2, 3 and 4 are farther away.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,9 +69,19 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # Support vectors satisfy y_i (w . x_i + b) = 1:
+    # point 1 (1, 1), y=+1:  w1 + w2 + b = +1
+    # point 5 (1, 0), y=-1:  w1      + b = -1
+    # point 6 (0, 1), y=-1:       w2 + b = -1
+    # (1) - (5) gives w2 = 2; (1) - (6) gives w1 = 2; then b = -1 - w1 = -3.
+    # boundary: 2 x1 + 2 x2 - 3 = 0, i.e. x1 + x2 = 1.5.
+    w1 = 1 - (-1)
+    w2 = 1 - (-1)
+    b = -1 - w1
+    # (the support vectors) = 1 / ||w|| = 1 / (2 sqrt 2) = sqrt(2) / 4.
+    # full width between the two supporting lines is 2 / ||w|| = sqrt(2) / 2.
+    margin = 1 / (w1 ** 2 + w2 ** 2) ** 0.5
+    return (w1, w2), b, margin
 
 
 def main():
