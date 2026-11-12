@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import numpy as np
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -38,6 +39,7 @@ def plot_svm_data(output_path):
     ax.set_aspect("equal", adjustable="box")
     ax.grid(alpha=0.3)
     ax.legend()
+    plot_svm_boundary(ax)
     fig.tight_layout()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,14 +47,22 @@ def plot_svm_data(output_path):
     plt.close(fig)
     return output_path
 
+def plot_svm_boundary(ax):
+    """For a sanity check, plot the svm boundary line on top of the given axis.
+    """
+    x1 = np.linspace(-5, 5, 100)
+    weights, bias, _ = derive_svm_separator()
+    x2 = -(weights[0]*x1 + bias) / weights[1]
+    ax.plot(x1, x2)
+
 
 def identify_support_vectors():
     """Q1(a), 10 points together with the plot: identify support vectors by eye.
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Returned here for convenience; see the report for the full explanation.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -65,8 +75,11 @@ def derive_svm_separator():
     Explain the derivation and your margin convention in the written report.
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    # See the report for the derivation of these values and explanation.
+    weights = np.array([2, 2])
+    bias = -3
+    margin = 1 / np.linalg.norm(weights)
+    return weights, bias, margin
 
 
 def main():
