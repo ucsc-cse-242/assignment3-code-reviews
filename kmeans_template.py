@@ -4,6 +4,10 @@ Implement the two update functions from scratch, then complete the experiment.
 """
 
 import argparse
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
 from pathlib import Path
 
 K_VALUES = (2, 3, 4, 6, 10)
@@ -14,11 +18,26 @@ def update_assignments(data, centroids):
 
     Q2(a): the two update functions together are worth 15 points.
     data has shape (n, d); centroids has shape (k, d).
-    The result should be an integer array with shape (n,).
+    The result should be an integer array with shape (n,), with values in 0..k-1
+    (the index of the centroid).
     Resolve equal-distance ties consistently and document your rule.
+
+    Distance is squared Euclidean distance (same nearest centroid as
+    Euclidean distance, since the square root is monotonic).
+
+    Tie rule: if a point is equally close to several centroids, it is
+    assigned to the one with the lowest index. This is the behavior of
+    np.argmin, which returns the first occurrence of the minimum.
     """
-    # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+
+    # (n, 1, d) - (1, k, d) -> (n, k, d): every point vs. every centroid
+    diffs = data[:, None, :] - centroids[None, :, :]
+
+    # Square, then sum over the coordinate axis -> (n, k) squared distances
+    sq_dists = (diffs ** 2).sum(axis=2)
+
+    # Nearest centroid per point -> (n,)
+    return np.argmin(sq_dists, axis=1)
 
 
 def update_centroids(data, centroids, assignments):
@@ -26,10 +45,22 @@ def update_centroids(data, centroids, assignments):
 
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
+
+    Empty-cluster policy: a cluster with no assigned points keeps its previous centroid.
     """
-    # TODO: Update the centroid of each nonempty cluster.
-    # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+
+    temp_centroids = centroids.astype(float)
+
+    # for each centroid
+    for j in range(centroids.shape[0]):
+        # points in j
+        mask = assignments == j
+        # if j has any points
+        if mask.any():
+            points_in_j = data[mask]  # shape (m_j, d)
+            # update centroid j to the mean of its points
+            temp_centroids[j] = points_in_j.mean(axis=0)  # shape (d,)
+    return temp_centroids
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -62,11 +93,88 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     Use the four-component truth labels only for a reference plot. K-means
     must cluster the features without access to those labels.
     """
-    # TODO: Load toy data, create a seeded RNG, and initialize centroids.
-    # TODO: Run kmeans for every value in K_VALUES.
-    # TODO: Plot each set of cluster assignments and its final centroids.
-    # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    """
+    Explain what changes as k increases and how the results relate to the four generating groups:
+    
+    k below 4 merges true blobs together, k of 4 matches the truth plot, and k above 4 splits blobs apart.
+    """
+
+    X, y = make_toy_data()
+    rng = np.random.default_rng(seed)
+
+    # Reference plot: true labels, for comparison only
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(X[:, 0], X[:, 1], c=y, cmap="tab10", s=5, alpha=0.6)
+    ax.set_title("Ground-truth labels (not used by k-means)")
+    fig.savefig(os.path.join(output_dir, "truth.png"), dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    for k in K_VALUES:
+        init = get_initial_clusters(k, X, rng)
+        centroids, assignments = kmeans(X, init, max_iterations)
+
+        plot_clustering(X, centroids, assignments,
+                        title=f"k-means, k={k}",
+                        path=os.path.join(output_dir, f"kmeans_k{k}.png"))
+
+
+def plot_clustering(X, centroids, assignments, title, path):
+    k = centroids.shape[0]
+    vmax = max(k - 1, 1)                  # same color scale for points and centroids
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter(X[:, 0], X[:, 1], c=assignments, cmap="tab10",
+               vmin=0, vmax=vmax, s=5, alpha=0.6)
+    ax.scatter(centroids[:, 0], centroids[:, 1], c=np.arange(k), cmap="tab10",
+               vmin=0, vmax=vmax, marker="X", s=200, edgecolors="k")
+    ax.set_title(title)
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+# def kmeans_history(data, centroids, max_iterations=100):
+#     """
+#     Record history of kmeans assignments and centroids
+#     """
+#     centroid_history = [centroids.astype(float)]
+#     assignment_history = []
+#     for _ in range(max_iterations):
+#         assignments = update_assignments(data, centroids)
+#         centroids = update_centroids(data, centroids, assignments)
+#         assignment_history.append(assignments)
+#         centroid_history.append(centroids)
+#     assignment_history.append(update_assignments(data, centroids))
+#     return centroid_history, assignment_history
+#
+#
+# def plot_steps(data, centroid_history, assignment_history, steps):
+#     """
+#     Plot kmeans history
+#     """
+#     path = np.stack(centroid_history)              # (T, k, d)
+#     k = path.shape[1]
+#     cols = 3
+#     rows = int(np.ceil(len(steps) / cols))
+#     fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows),
+#                              sharex=True, sharey=True)
+#     axes = np.atleast_1d(axes).ravel()
+#
+#     for ax, t in zip(axes, steps):
+#         # points colored by current assignment
+#         ax.scatter(data[:, 0], data[:, 1], c=assignment_history[t],
+#                    cmap="tab10", vmin=0, vmax=9, s=5, alpha=0.6)
+#         # trail showing where each centroid has been
+#         for j in range(k):
+#             ax.plot(path[:t + 1, j, 0], path[:t + 1, j, 1], "k.-", lw=1)
+#         # current centroids as big X markers, colored to match their cluster
+#         ax.scatter(path[t, :, 0], path[t, :, 1], c=np.arange(k),
+#                    cmap="tab10", vmin=0, vmax=9, marker="X", s=200,
+#                    edgecolors="k")
+#         ax.set_title(f"Iteration {t}")
+#
+#     for ax in axes[len(steps):]:
+#         ax.axis("off")
+#     plt.tight_layout()
+#     plt.show()
 
 
 def main():
@@ -77,6 +185,15 @@ def main():
                         default=Path(__file__).resolve().parent / "results" / "kmeans")
     args = parser.parse_args()
     run_experiments(args.output_dir, args.seed, args.max_iterations)
+
+
+    # Visualizing history
+    # X, _ = make_toy_data()  # make_blobs returns (X, y), so unpack it
+    # rng = np.random.default_rng(0)
+    # init = get_initial_clusters(4, X, rng)
+    #
+    # cent_hist, assign_hist = kmeans_history(X, init, max_iterations=15)
+    # plot_steps(X, cent_hist, assign_hist, steps=[0, 1, 2, 3, 5, 15])
 
 
 if __name__ == "__main__":
