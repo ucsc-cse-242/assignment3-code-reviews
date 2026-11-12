@@ -1,10 +1,16 @@
 """Question 3: noisy-label SVM and K-NN repair (40 points).
 
-Complete the TODOs. Keep test labels clean and use them only for evaluation.
+Keep test labels clean and use them only for evaluation.
 """
 
 import argparse
+import csv
 from pathlib import Path
+
+import numpy as np
+from scipy.spatial.distance import cdist
+from sklearn.metrics import accuracy_score
+from sklearn.svm import SVC
 
 SVM_C = 1.0
 SVM_GAMMA = 0.01
@@ -19,12 +25,12 @@ def generate_clean_split(rng, samples_per_class=1000):
     Negative class: mean (-1, -1), covariance 3I.
     The negative covariance entries are variances, not standard deviations.
     """
-    import numpy as np
     positive = rng.multivariate_normal((1, 1), np.eye(2), samples_per_class)
     negative = rng.multivariate_normal((-1, -1), 3 * np.eye(2), samples_per_class)
     features = np.vstack((positive, negative))
-    labels = np.concatenate((np.ones(samples_per_class, dtype=int),
-                             -np.ones(samples_per_class, dtype=int)))
+    labels = np.concatenate(
+        (np.ones(samples_per_class, dtype=int), -np.ones(samples_per_class, dtype=int))
+    )
     return features, labels
 
 
@@ -35,29 +41,30 @@ def corrupt_training_labels(clean_labels, rng):
     flipped in one direction to be flipped again by the other rule.
     Return a new array, leaving clean_labels unchanged.
     """
-    # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    probabilities = np.where(
+        clean_labels == 1, POSITIVE_FLIP_PROBABILITY, NEGATIVE_FLIP_PROBABILITY
+    )
+    flips = rng.random(len(clean_labels)) < probabilities
+    return np.where(flips, -clean_labels, clean_labels)
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
-    """Q3(b): propose a K-NN label-repair method; return repaired labels.
+    """Return majority labels from each point's five nearest other points.
 
-    For this simplified assignment, use 5 neighbors, Euclidean distance,
-    and replace each label with the majority label of those neighbors.
-    Five binary votes cannot tie; break equal-distance neighbor ties consistently.
-    Exclude each point itself from its neighborhood. Base all repairs on
-    the original noisy labels, so row ordering does not affect the outcome.
-    sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
+    All votes use the original noisy labels. Equal-distance ties select the
+    lowest training-row indices. Squared distances preserve neighbor ordering.
     """
-    # TODO: Find neighbors using training features only.
-    # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    if neighbors != 5 or len(train_features) <= neighbors:
+        raise ValueError("Require five neighbors and at least six training points.")
+    squared_distances = cdist(train_features, train_features, metric="sqeuclidean")
+    np.fill_diagonal(squared_distances, np.inf)
+    # Stable sorting preserves row-index order for equal distances.
+    indices = np.argsort(squared_distances, axis=1, kind="stable")[:, :neighbors]
+    return np.where(np.sum(noisy_labels[indices], axis=1) > 0, 1, -1)
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
     """Train the required RBF SVM and return accuracy on the clean test set."""
-    from sklearn.svm import SVC
-    from sklearn.metrics import accuracy_score
     model = SVC(kernel="rbf", C=SVM_C, gamma=SVM_GAMMA)
     model.fit(train_features, train_labels)
     return float(accuracy_score(test_labels, model.predict(test_features)))
@@ -66,28 +73,58 @@ def train_and_evaluate(train_features, train_labels, test_features, test_labels)
 def run_comparison(repeats, seed, neighbors, output_path):
     """Q3(a-b), 20 points each: compare the baseline with K-NN label repair.
 
-    Suggested adaptation: generate independent clean training/test sets once,
+    Generate independent clean training/test sets once,
     then repeat corruption and training (default: 20 noise trials). In each
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
-    # TODO: Generate independent clean training and test splits.
-    # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
-    # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    if repeats < 1:
+        raise ValueError("repeats must be positive")
+    rng = np.random.default_rng(seed)
+    train_features, clean_labels = generate_clean_split(rng)
+    test_features, test_labels = generate_clean_split(rng)
+    rows = []
+    for trial in range(1, repeats + 1):
+        noisy_labels = corrupt_training_labels(clean_labels, rng)
+        baseline = train_and_evaluate(
+            train_features, noisy_labels, test_features, test_labels
+        )
+        repaired_labels = repair_labels_knn(train_features, noisy_labels, neighbors)
+        knn_accuracy = train_and_evaluate(
+            train_features, repaired_labels, test_features, test_labels
+        )
+        rows.append((trial, baseline, knn_accuracy))
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(("trial", "baseline_accuracy", "knn_accuracy"))
+        writer.writerows(rows)
+    baseline_mean = np.mean([r[1] for r in rows])
+    repaired_mean = np.mean([r[2] for r in rows])
+    print(
+        f"Baseline: {baseline_mean:.6f}; K-NN: {repaired_mean:.6f}; "
+        f"difference: {100 * (repaired_mean - baseline_mean):+.3f} percentage points"
+    )
+    return rows
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repeats", type=int, default=20)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--neighbors", type=int, default=5,
-                        choices=(5,), help="Use five neighbors for this assignment.")
-    parser.add_argument("--output", type=Path,
-                        default=Path(__file__).resolve().parent / "results" / "noise_comparison.csv")
+    parser.add_argument(
+        "--neighbors",
+        type=int,
+        default=5,
+        choices=(5,),
+        help="Use five neighbors for this assignment.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(__file__).resolve().parent / "results" / "noise_comparison.csv",
+    )
     args = parser.parse_args()
     run_comparison(args.repeats, args.seed, args.neighbors, args.output)
 
