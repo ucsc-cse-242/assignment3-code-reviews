@@ -6,6 +6,10 @@ Complete the TODOs. Keep test labels clean and use them only for evaluation.
 import argparse
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from sklearn.neighbors import NearestNeighbors
+
 SVM_C = 1.0
 SVM_GAMMA = 0.01
 POSITIVE_FLIP_PROBABILITY = 0.35
@@ -19,7 +23,6 @@ def generate_clean_split(rng, samples_per_class=1000):
     Negative class: mean (-1, -1), covariance 3I.
     The negative covariance entries are variances, not standard deviations.
     """
-    import numpy as np
     positive = rng.multivariate_normal((1, 1), np.eye(2), samples_per_class)
     negative = rng.multivariate_normal((-1, -1), 3 * np.eye(2), samples_per_class)
     features = np.vstack((positive, negative))
@@ -35,8 +38,13 @@ def corrupt_training_labels(clean_labels, rng):
     flipped in one direction to be flipped again by the other rule.
     Return a new array, leaving clean_labels unchanged.
     """
-    # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    draws = rng.random(clean_labels.shape[0])
+    flip = np.where(clean_labels == 1,
+                    draws < POSITIVE_FLIP_PROBABILITY,
+                    draws < NEGATIVE_FLIP_PROBABILITY)
+    noisy = clean_labels.copy()
+    noisy[flip] = -noisy[flip]
+    return noisy
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -49,9 +57,11 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     the original noisy labels, so row ordering does not affect the outcome.
     sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
     """
-    # TODO: Find neighbors using training features only.
-    # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    nn = NearestNeighbors(n_neighbors=neighbors + 1, metric="euclidean").fit(train_features)
+    _, idx = nn.kneighbors(train_features)
+    neighbor_idx = np.array([row[row != i][:neighbors] for i, row in enumerate(idx)])
+    votes = noisy_labels[neighbor_idx].sum(axis=1)
+    return np.where(votes > 0, 1, -1)
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -71,13 +81,31 @@ def run_comparison(repeats, seed, neighbors, output_path):
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
-    # TODO: Generate independent clean training and test splits.
-    # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
-    # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    rng = np.random.default_rng(seed)
+    train_X, train_y = generate_clean_split(rng)
+    test_X, test_y = generate_clean_split(rng)
+
+    rows = []
+    for trial in range(1, repeats + 1):
+        noisy = corrupt_training_labels(train_y, rng)
+        baseline = train_and_evaluate(train_X, noisy, test_X, test_y)
+        repaired = repair_labels_knn(train_X, noisy, neighbors)
+        knn_acc = train_and_evaluate(train_X, repaired, test_X, test_y)
+        rows.append({"trial": trial, "baseline_accuracy": baseline, "knn_accuracy": knn_acc})
+
+    df = pd.DataFrame(rows)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
+
+    print(df.to_string(index=False))
+    print()
+    print(f"Mean baseline accuracy : {df['baseline_accuracy'].mean():.4f}")
+    print(f"Mean K-NN accuracy     : {df['knn_accuracy'].mean():.4f}")
+    print(f"Difference (K-NN - base): {(df['knn_accuracy'] - df['baseline_accuracy']).mean():+.4f}")
+    print(f"K-NN better in {(df['knn_accuracy'] > df['baseline_accuracy']).sum()} of {len(df)} trials")
+    print(f"Saved CSV to {output_path}")
+    return df
 
 
 def main():
