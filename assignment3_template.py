@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import math
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -52,7 +53,12 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    
+    """
+    Looking at the generated plot, we can see negative point 5 and 6 would be the negative boundaries, while the postive boundary would be on point 1. 
+    From there, we can identify the support vector to be between negative point 5 and 6, as well as positve point 1.
+    """
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -65,6 +71,19 @@ def derive_svm_separator():
     Explain the derivation and your margin convention in the written report.
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
+    
+
+    # Obtained both weights using the coordinates of the support vectors.
+    weights = (2, 2)
+    
+    # Substituted weights into equation to obtain the bias.
+    bias = -3
+    
+    # Used euclidean norm of the weight vector w.
+    geometric_margin = 1 / math.sqrt(2**2 + 2**2)
+    
+    return weights, bias, geometric_margin
+        
     # TODO: Determine the geometric margin and state its meaning.
     raise NotImplementedError("Derive the SVM boundary and geometric margin.")
 
