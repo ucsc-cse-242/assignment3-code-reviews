@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import math
 
 
 SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
@@ -52,7 +53,7 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -66,7 +67,7 @@ def derive_svm_separator():
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    return (2, 2), -3, 1 / math.sqrt(2 ** 2 + 2 ** 2)
 
 
 def main():
@@ -74,7 +75,8 @@ def main():
     parser.add_argument("--task", choices=("plot", "svm"),
                         default="plot", help="Default: generate the SVM data plot.")
     parser.add_argument("--output", type=Path,
-                        default=Path(__file__).resolve().parent / "svm_data.png",
+                        default=Path(__file__).resolve().parent /
+                        "svm_data.png",
                         help="Output image path for --task plot.")
     args = parser.parse_args()
     if args.task == "plot":
