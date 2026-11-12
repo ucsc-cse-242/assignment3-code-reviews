@@ -5,6 +5,9 @@ Complete the TODOs. Keep test labels clean and use them only for evaluation.
 
 import argparse
 from pathlib import Path
+import numpy as np
+import csv
+from sklearn.neighbors import NearestNeighbors
 
 SVM_C = 1.0
 SVM_GAMMA = 0.01
@@ -36,7 +39,16 @@ def corrupt_training_labels(clean_labels, rng):
     Return a new array, leaving clean_labels unchanged.
     """
     # TODO: Draw flips and return the noisy labels.
-    raise NotImplementedError("Implement asymmetric training-label noise.")
+    dirty_labels = np.array(clean_labels, copy=True)
+    for i in range(len(dirty_labels)):
+        if dirty_labels[i] >= 0:
+            rand = rng.choice([0, 1], p=[0.35, 0.65])
+        elif dirty_labels[i] < 0:
+            rand = rng.choice([0, 1], p=[0.2, 0.8])
+        if rand == 0:
+            dirty_labels[i] = dirty_labels[i] * -1
+    
+    return dirty_labels
 
 
 def repair_labels_knn(train_features, noisy_labels, neighbors):
@@ -49,9 +61,19 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     the original noisy labels, so row ordering does not affect the outcome.
     sklearn.neighbors may be used; from-scratch K-NN is not a source requirement.
     """
+
     # TODO: Find neighbors using training features only.
+    model = NearestNeighbors(n_neighbors=neighbors, metric="euclidean")
+    model.fit(train_features)
+
+    neighbor_indices = model.kneighbors(return_distance=False)
+
     # TODO: Replace labels using the majority vote of their five neighbors.
-    raise NotImplementedError("Implement K-NN majority-vote label repair.")
+    neighbor_labels = noisy_labels[neighbor_indices]
+    vote_sums = np.sum(neighbor_labels, axis=1)
+    repaired_labels = np.where(vote_sums > 0, 1, -1)
+
+    return repaired_labels
 
 
 def train_and_evaluate(train_features, train_labels, test_features, test_labels):
@@ -71,13 +93,53 @@ def run_comparison(repeats, seed, neighbors, output_path):
     trial, use identical data and corrupted labels for both approaches.
     Do not give the repair method the clean training or test labels.
     """
+
+    results = []
     # TODO: Generate independent clean training and test splits.
+    rng = np.random.default_rng(seed)
+    trainFeatures, cleanTrainLabels = generate_clean_split(rng)
+    testFeatures, testLabels = generate_clean_split(rng)
+    
     # TODO: For each repeat, corrupt training labels and evaluate the baseline.
-    # TODO: Repair the same noisy labels with K-NN.
-    # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
-    # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
+    for i in range(repeats):
+        noisyLabels = corrupt_training_labels(cleanTrainLabels, rng)
+        baselineAccuracy = train_and_evaluate(trainFeatures, noisyLabels, testFeatures, testLabels)
+
+        # TODO: Repair the same noisy labels with K-NN.    
+        # TODO: Train a fresh SVM on repaired labels; evaluate on clean test data.
+        repairedLabels = repair_labels_knn(trainFeatures, noisyLabels, neighbors)
+        repairedAccuracy = train_and_evaluate(trainFeatures, repairedLabels, testFeatures, testLabels)
+        
+        # TODO: Save per-trial accuracy for all methods to a CSV at output_path.
+        results.append([
+            i,
+            baselineAccuracy,
+            repairedAccuracy,
+            repairedAccuracy - baselineAccuracy,
+        ])
+
+    with output_path.open("w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            "trial",
+            "baseline_accuracy",
+            "repaired_accuracy",
+            "accuracy_change",
+        ])
+        writer.writerows(results)       
+
     # TODO: Report mean accuracy and the change from baseline.
-    raise NotImplementedError("Complete the repeated noise-repair comparison.")
+    results_array = np.array(results)
+
+    mean_baseline = np.mean(results_array[:, 1])
+    mean_repaired = np.mean(results_array[:, 2])
+    mean_change = mean_repaired - mean_baseline
+
+    print(f"Mean baseline accuracy: {mean_baseline * 100}%")
+    print(f"Mean repaired accuracy: {mean_repaired * 100}%")
+    print(f"Change from baseline: {mean_change * 100}%")
+
+    return
 
 
 def main():
