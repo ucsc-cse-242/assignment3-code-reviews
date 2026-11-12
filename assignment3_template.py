@@ -50,9 +50,12 @@ def identify_support_vectors():
     """Q1(a), 10 points together with the plot: identify support vectors by eye.
 
     Return their 1-based point IDs and explain your choice in the report.
+
+    The maximum-margin line is x1 + x2 = 1.5. The training points at minimum
+    distance from that line are point 1, (1, 1), and points 5 and 6,
+    (1, 0) and (0, 1). Points 2, 3, and 4 sit strictly farther from the line.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -63,10 +66,15 @@ def derive_svm_separator():
 
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
+
+    Canonical hard-margin constraints y_i (w · x_i + b) = 1 on the support
+    vectors give w = (2, 2) and b = -3. The geometric margin reported here is
+    the distance from the boundary to the closest training points, 1 / ||w||.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    weights = (2.0, 2.0)
+    bias = -3.0
+    geometric_margin = 1.0 / (8.0 ** 0.5)
+    return weights, bias, geometric_margin
 
 
 def main():
