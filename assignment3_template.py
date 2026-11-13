@@ -1,5 +1,4 @@
-"""CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
-"""
+"""CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points)."""
 
 import argparse
 from pathlib import Path
@@ -27,14 +26,22 @@ def plot_svm_data(output_path):
     for label, color, marker in ((1, "tab:blue", "o"), (-1, "tab:orange", "s")):
         points = [x for x, y in zip(SVM_X, SVM_Y) if y == label]
         ax.scatter(
-            [x[0] for x in points], [x[1] for x in points],
-            color=color, marker=marker, s=90, label=f"y = {label:+d}",
+            [x[0] for x in points],
+            [x[1] for x in points],
+            color=color,
+            marker=marker,
+            s=90,
+            label=f"y = {label:+d}",
         )
     for point_id, (x1, x2) in enumerate(SVM_X, start=1):
-        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7),
-                    textcoords="offset points")
-    ax.set(xlabel="x1", ylabel="x2", title="Assignment 3: SVM training data",
-           xlim=(-0.5, 2.5), ylim=(-0.5, 2.5))
+        ax.annotate(str(point_id), (x1, x2), xytext=(7, 7), textcoords="offset points")
+    ax.set(
+        xlabel="x1",
+        ylabel="x2",
+        title="Assignment 3: SVM training data",
+        xlim=(-0.5, 2.5),
+        ylim=(-0.5, 2.5),
+    )
     ax.set_aspect("equal", adjustable="box")
     ax.grid(alpha=0.3)
     ax.legend()
@@ -52,7 +59,9 @@ def identify_support_vectors():
     Return their 1-based point IDs and explain your choice in the report.
     """
     # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    # Closest opposite-class points: (1, 1) on x1 + x2 = 2 and (1, 0), (0, 1)
+    # on x1 + x2 = 1; the boundary sits midway, on x1 + x2 = 1.5.
+    return [1, 5, 6]
 
 
 def derive_svm_separator():
@@ -66,16 +75,31 @@ def derive_svm_separator():
     """
     # TODO: Derive the maximum-margin separating line from the support vectors.
     # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import numpy as np
+
+    support = [i - 1 for i in identify_support_vectors()]
+    # each support vector is on its margin: y_i (w . x_i + b) = 1
+    system = np.array([[*SVM_X[i], 1] for i in support], dtype=float)
+    w1, w2, b = np.linalg.solve(system, [SVM_Y[i] for i in support])
+    # distance from the boundary to the closest points; the full width is 2 / ||w||.
+    margin = 1 / np.hypot(w1, w2)
+    return (float(w1), float(w2)), float(b), float(margin)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--task", choices=("plot", "svm"),
-                        default="plot", help="Default: generate the SVM data plot.")
-    parser.add_argument("--output", type=Path,
-                        default=Path(__file__).resolve().parent / "svm_data.png",
-                        help="Output image path for --task plot.")
+    parser.add_argument(
+        "--task",
+        choices=("plot", "svm"),
+        default="plot",
+        help="Default: generate the SVM data plot.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(__file__).resolve().parent / "svm_data.png",
+        help="Output image path for --task plot.",
+    )
     args = parser.parse_args()
     if args.task == "plot":
         print(f"Saved plot to {plot_svm_data(args.output)}")
