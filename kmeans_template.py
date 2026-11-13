@@ -5,6 +5,7 @@ Implement the two update functions from scratch, then complete the experiment.
 
 import argparse
 from pathlib import Path
+import numpy as np
 
 K_VALUES = (2, 3, 4, 6, 10)
 
@@ -18,7 +19,12 @@ def update_assignments(data, centroids):
     Resolve equal-distance ties consistently and document your rule.
     """
     # TODO: Compute distances and assign each point to a centroid.
-    raise NotImplementedError("Implement the assignment step from scratch.")
+
+    # if distances are equal, argmin picks the smaller cluster number
+    dist = np.zeros((data.shape[0], centroids.shape[0]))
+    for j in range(centroids.shape[0]):
+        dist[:, j] = np.sum((data - centroids[j]) ** 2, axis=1)
+    return np.argmin(dist, axis=1)
 
 
 def update_centroids(data, centroids, assignments):
@@ -29,7 +35,16 @@ def update_centroids(data, centroids, assignments):
     """
     # TODO: Update the centroid of each nonempty cluster.
     # TODO: Handle empty clusters using your documented policy.
-    raise NotImplementedError("Implement the centroid step from scratch.")
+        # Empty clusters: keep the previous centroid.
+    new_centroids = centroids.copy()
+
+    for cluster in range(centroids.shape[0]):
+        members = data[assignments == cluster]
+        if len(members) > 0:
+            new_centroids[cluster] = members.mean(axis=0)
+
+    return new_centroids
+
 
 
 def kmeans(data, centroids, max_iterations=100):
@@ -55,6 +70,19 @@ def get_initial_clusters(k, data, rng):
     """
     return data[rng.integers(0, data.shape[0], size=k)].copy()
 
+def plot_clusters(data, centroids, assignments, k, output_path):
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10", s=8)
+    plt.scatter(centroids[:, 0], centroids[:, 1], c="black", marker="x", s=100, linewidths=2)
+    plt.title(f"K-means, k = {k}")
+    plt.xlabel("Feature 1")
+    plt.ylabel("Feature 2")
+    plt.savefig(output_path)
+    plt.close()
+
+
 
 def run_experiments(output_dir, seed=0, max_iterations=100):
     """Q2(b), 15 points: run all five k values and save cluster plots.
@@ -66,7 +94,16 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
     # TODO: Run kmeans for every value in K_VALUES.
     # TODO: Plot each set of cluster assignments and its final centroids.
     # TODO: Save plots under output_dir and discuss the effect of k.
-    raise NotImplementedError("Complete the K-means experiment and plots.")
+    data, y = make_toy_data()  # y is not used for clustering
+    rng = np.random.default_rng(seed)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for k in K_VALUES:
+        start = get_initial_clusters(k, data, rng)
+        centroids, assignments = kmeans(data, start, max_iterations)
+        plot_clusters(data, centroids, assignments, k, output_dir / f"kmeans_k{k}.png")
+        print("finished k =", k)
+
 
 
 def main():
