@@ -16,6 +16,8 @@ def update_assignments(data, centroids):
     data has shape (n, d); centroids has shape (k, d).
     The result should be an integer array with shape (n,).
     Resolve equal-distance ties consistently and document your rule.
+
+    Ties go to the lowest centroid index (np.argmin picks the first minimum).
     """
     import numpy as np
     data = np.asarray(data, dtype=float)
@@ -34,6 +36,8 @@ def update_centroids(data, centroids, assignments):
 
     Document how you handle an empty cluster. One valid choice is to retain
     its previous centroid. Avoid modifying the input centroid array in place.
+
+    An empty cluster keeps its previous centroid.
     """
 
     import numpy as np

@@ -69,6 +69,7 @@ def repair_labels_knn(train_features, noisy_labels, neighbors):
     
     np.fill_diagonal(dist, np.inf)
 
+    # Stable sort: equal-distance ties go to the lower row index.
     sorted_indices = np.argsort(dist, axis=1, kind="stable")
     order = sorted_indices[:, :neighbors]
     votes = noisy_labels[order].sum(axis=1) 

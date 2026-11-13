@@ -65,10 +65,17 @@ def derive_svm_separator():
     Explain the derivation and your margin convention in the written report.
     """
 
-    import math
-    weights = (2.0, 2.0)
-    bias = -3.0
-    geometric_margin = 1.0 / math.hypot(weights[0], weights[1])
+    import numpy as np
+
+    # Solve y_i (w . x_i + b) = 1 for the support vectors -> w = (2, 2), b = -3.
+    sv_rows = [i - 1 for i in identify_support_vectors()]
+    a = np.array([[SVM_Y[i] * SVM_X[i][0], SVM_Y[i] * SVM_X[i][1], SVM_Y[i]]
+                  for i in sv_rows], dtype=float)
+    w1, w2, b = np.linalg.solve(a, np.ones(len(sv_rows)))
+    weights = (float(w1), float(w2))
+    bias = float(b)
+    # Geometric margin = 1 / ||w||.
+    geometric_margin = float(1.0 / np.hypot(w1, w2))
     return weights, bias, geometric_margin
 
 
