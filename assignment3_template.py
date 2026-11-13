@@ -51,8 +51,7 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    return (1, 5, 6) #see report for explanation
 
 
 def derive_svm_separator():
@@ -64,10 +63,19 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import numpy as np
+    svs = identify_support_vectors()
+    # each of the support vectors should satisfy w1*x1 + w2*x2 + b = y
+    A = np.array([[*SVM_X[i - 1], 1.0] for i in svs])
+    y = np.array([SVM_Y[i - 1] for i in svs], dtype=float)
+    w1, w2, b = np.linalg.solve(A, y)
 
+    # add check tomake sure every training point must satisfy y * (w.x + b) >= 1
+    for (x1, x2), label in zip(SVM_X, SVM_Y):
+        assert label * (w1 * x1 + w2 * x2 + b) >= 1 - 1e-9
+
+    margin = 1.0 / np.hypot(w1, w2)   # geometric distance from boundary to closest points
+    return (float(w1), float(w2)), float(b), float(margin)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
