@@ -2,6 +2,7 @@
 """
 
 import argparse
+import math
 from pathlib import Path
 
 
@@ -51,8 +52,10 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+
+    # The points that are closest to the other class
+
+    return (1, 5, 6)
 
 
 def derive_svm_separator():
@@ -64,9 +67,11 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    
+    weights = (2.0, 2.0)
+    bias = -3.0
+    geometric_margin = 1.0 / math.hypot(*weights)
+    return weights, bias, geometric_margin
 
 
 def main():
@@ -83,6 +88,7 @@ def main():
         print("Support vector point IDs:", identify_support_vectors())
         weights, bias, margin = derive_svm_separator()
         print(f"Weights: {weights}; bias: {bias}; geometric margin: {margin}")
+        print(f"Full width between supporting lines: {2 * margin}")
 
 
 if __name__ == "__main__":
