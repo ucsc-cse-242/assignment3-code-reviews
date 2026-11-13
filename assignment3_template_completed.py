@@ -51,8 +51,24 @@ def identify_support_vectors():
 
     Return their 1-based point IDs and explain your choice in the report.
     """
-    # TODO: Inspect the plot and identify all support vectors.
-    raise NotImplementedError("Identify and justify the support vectors.")
+    import numpy as np
+    from itertools import combinations
+
+    X, y = np.array(SVM_X, float), np.array(SVM_Y, float)
+    best = None
+    # Assume 3 support vectors (general position in 2-D): for each triple,
+    # solve y_i (w . x_i + b) = 1, keep it if every point satisfies
+    # y (w . x + b) >= 1, and choose the feasible triple with the smallest |w|.
+    for ids in combinations(range(len(X)), 3):
+        A = np.c_[X[list(ids)], np.ones(3)]
+        if abs(np.linalg.det(A)) < 1e-9:
+            continue
+        w1, w2, b = np.linalg.solve(A, y[list(ids)])
+        if np.all(y * (X @ [w1, w2] + b) >= 1 - 1e-9):
+            norm = np.hypot(w1, w2)
+            if best is None or norm < best[0]:
+                best = (norm, ids)
+    return tuple(i + 1 for i in best[1])
 
 
 def derive_svm_separator():
@@ -64,9 +80,16 @@ def derive_svm_separator():
     Return (weights, bias, geometric_margin), with weights a pair of numbers.
     Explain the derivation and your margin convention in the written report.
     """
-    # TODO: Derive the maximum-margin separating line from the support vectors.
-    # TODO: Determine the geometric margin and state its meaning.
-    raise NotImplementedError("Derive the SVM boundary and geometric margin.")
+    import numpy as np
+
+    ids = [i - 1 for i in identify_support_vectors()]
+    X, y = np.array(SVM_X, float)[ids], np.array(SVM_Y, float)[ids]
+    # Support vectors lie on the margin: y_i (w . x_i + b) = 1.
+    w1, w2, b = np.linalg.solve(np.c_[X, np.ones(len(ids))], y)
+    # Geometric margin = distance from the boundary to the nearest point
+    # = 1 / |w| (the full width between the margin lines is 2 / |w|).
+    margin = 1 / np.hypot(w1, w2)
+    return (float(w1), float(w2)), float(b), float(margin)
 
 
 def main():
