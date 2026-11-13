@@ -1,0 +1,6 @@
+seed=0, max_iterations=100
+k= 2  SSE=  15222.2  cluster sizes=[1017, 2983]
+k= 3  SSE=   6826.1  cluster sizes=[1008, 1992, 1000]
+k= 4  SSE=   2794.2  cluster sizes=[1000, 998, 1002, 1000]
+k= 6  SSE=   2396.8  cluster sizes=[1000, 299, 997, 407, 319, 978]
+k=10  SSE=   1914.8  cluster sizes=[365, 350, 253, 261, 988, 997, 123, 213, 285, 165]
