@@ -1,0 +1,210 @@
+❯ Solve assignment 3                                                                                                                                                
+
+  Listed 2 directories (ctrl+o to expand)
+
+  Listed 2 directories (ctrl+o to expand)
+
+⏺ Bash(cd /Users/daniel/Documents/School/2026-2027/CSE242/assignments/Assignment3 && cat assignment3_template.py kmeans_template.py
+      noisy_classification_template.py; p…)
+  ⎿  Error: Exit code 1
+     """CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
+     """
+
+     import argparse
+     from pathlib import Path
+
+
+     SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
+     SVM_Y = (1, 1, 1, -1, -1, -1)
+     … +240 lines (ctrl+o to expand)
+
+     """CSE 242 Assignment 3, Question 1: hard-margin linear SVM (30 points).
+     """
+
+     import argparse
+     from pathlib import Path
+
+
+     SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
+
+
+     SVM_X = ((1, 1), (1, 2), (2, 1), (0, 0), (1, 0), (0, 1))
+     SVM_Y = (1, 1, 1, -1, -1, -1)
+     … +240 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/daniel/Documents/School/2026-2027/CSE242/assignments/Assignment3 && sed -n 30,80p
+      kmeans_template.py)
+  ⎿      # TODO: Update the centroid of each nonempty cluster.
+         # TODO: Handle empty clusters using your documented policy.
+         raise NotImplementedError("Implement the centroid step from scratch.")
+     … +47 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+
+⏺ Bash(python3 -m venv /private/tmp/claude-505/venv && /private/tmp/claude-505/venv/bin/pip install -q
+      numpy matplotlib scikit-learn 2>&1 | tail -2)
+  ⎿  [notice] A new release of pip is available: 25.2 -> 26.3
+     [notice] To update, run: /private/tmp/claude-505/venv/bin/python3.13 -m pip install --upgrade
+     pip
+  ⎿  Allowed by auto mode classifier
+
+⏺ Bash(python3 - <<'EOF'
+      import re…)
+  ⎿  Support vector point IDs: (1, 5, 6)
+     Weights: (2.0, 2.0); bias: -3.0; geometric margin: 0.35355339059327373
+     Matplotlib is building the font cache; this may take a moment.
+     … +12 lines (ctrl+o to expand)
+  ⎿  Allowed by auto mode classifier
+
+⏺ Q1–Q3 code is done and runs; I'm about to give you the summary, with the PDF write-up as the one
+  remaining deliverable.
+
+  Code (all three files completed and run):
+  - Q1: Support vectors are points 1, 5, 6. Solving w1+w2+b=1, w1+b=-1, w2+b=-1 gives w = (2, 2), b =
+    −3, so the boundary is 2x1 + 2x2 − 3 = 0. The geometric margin is 1/‖w‖ = 1/(2√2) ≈ 0.3536, and the
+    full width is ≈ 0.7071. The dual check gives α = (4, 2, 2), all positive, which confirms optimality.
+  - Q2: Assignment ties go to the lowest centroid index, and an empty cluster keeps its previous
+    centroid. Plots are in results/kmeans/ (kmeans_k{2,3,4,6,10}.png and reference.png). With k=4 the
+    clusters recover the four blobs (sizes ≈ 1000 each). With k<4 blobs merge. With k>4 the blobs split
+    into arbitrary sub-clusters.
+  - Q3: Baseline mean accuracy is 0.8280, K-NN repair is 0.8644, a difference of +0.0364. Per-trial
+    results are in results/noise_comparison.csv. Repair likely helps because the noise is independent,
+    so neighbor majorities mostly outvote it. It could hurt near the class overlap, where neighbors are
+    genuinely mixed.
+
+  I haven't written the PDF report (derivation, K-means discussion, accuracy comparison, AI
+  acknowledgment). I can draft it as a doc or markdown if you want.
+
+✻ Churned for 1m 56s · done 11:45 PM
+
+※ recap: The goal is finishing Assignment 3, and all three code files now run with results saved (SVM
+  margin 0.354, K-means plots, K-NN repair 0.864 vs baseline 0.828). Next I'll draft the PDF write-up,
+  if you want me to. (disable recaps in /config)
+
+❯  Write a report in report.md                                                                          
+
+⏺ Write(report.md)
+  ⎿  Wrote 64 lines to report.md
+      1 # CSE 242 — Assignment 3 Report
+      2 
+      3 ## Question 1: Hard-margin linear SVM
+      4 
+      5 ### (a) Support vectors
+      6 
+      7 Plot: `svm_data.png`. The positive points are 1 (1,1), 2 (1,2), 3 (2,1); the negative poi
+        nts are 4 (0,0), 5 (1,0), 6 (0,1).
+      8
+      9 The support vectors are **points 1, 5, and 6**. Point 1 is the positive point nearest the
+     … +56 lines (~5 KB) (ctrl+o to expand)
+
+⏺ Update(report.md) 
+  ⎿  Added 1 line, removed 1 line
+      16  - Point 5: w1 + b = −1
+      17  - Point 6: w2 + b = −1
+      18  
+      19 -Subtracting the last two gives w1 = w2. The second equation then gives w1 = 1 − ... sol
+         -ving directly: from (1) − (2), w2 = 2; from (1) − (3), w1 = 2; then b = −1 − 2 = −3.   
+      19 +Subtracting (2) from (1) gives w2 = 2, and subtracting (3) from (1) gives w1 = 2. Then 
+         +b = −1 − w1 = −3.                                                                      
+      20  
+      21  **w = (2, 2), b = −3**, so the boundary is **2x1 + 2x2 − 3 = 0** (equivalently x1 + x2 
+          = 1.5).
+      22  
+
+⏺ Update(report.md)
+  ⎿  Added 1 line, removed 1 line
+      45  | 6 | 1000, 299, 997, 407, 319, 978 |
+      46  | 10 | 365, 350, 253, 261, 988, 997, 123, 213, 285, 165 |
+      47  
+      48 -**Discussion.** The data has four well-separated groups of about 1000 points each. At k
+         - = 2 and k = 3, groups are forced to merge (the 1992-point cluster at k = 3 is two blob
+         -s combined). At k = 4 the clusters match the four generating groups almost exactly, wit
+         -h sizes about 1000 each. For k > 4 there are more centroids than groups, so some true b
+         -lobs are split into arbitrary sub-clusters (at k = 6 two blobs remain whole at about 10
+         -00 points, and the other two are split into pieces of 299–407). Within-cluster variance
+         - keeps falling as k grows, so the lower error at larger k does not mean a better cluste
+         -ring. The right k is revealed by the structure of the data, not by the objective alone.
+         - Results also depend on the random initialization, since centroids are sampled from the
+         - data.                                                                                 
+      48 +**Discussion.** The data has four well-separated groups of about 1000 points each. At k
+         + = 2 and k = 3, groups are forced to merge (the 1992-point cluster at k = 3 is two blob
+         +s combined). At k = 4 the clusters match the four generating groups almost exactly, wit
+         +h sizes about 1000 each. For k > 4 there are more centroids than groups, so some true b
+         +lobs are split into arbitrary sub-clusters (at k = 6 three clusters of about 1000 point
+         +s remain, and the rest of the data is split into pieces of 299–407 points). Within-clus
+         +ter variance keeps falling as k grows, so the lower error at larger k does not mean a b
+         +etter clustering. The right k is revealed by the structure of the data, not by the obje
+         +ctive alone. Results also depend on the random initialization, since centroids are samp
+         +led from the data.                                                                     
+      49  
+      50  ## Question 3: Noisy-label SVM and K-NN repair
+      51  
+
+⏺ I wrote the report to Assignment3/report.md. It covers all three questions:
+
+  - Q1: The support vectors are points 1, 5 and 6. The derivation gives w = (2, 2), b = −3, and the
+    geometric margin is √2/4 ≈ 0.3536, with the full width (≈ 0.7071) labeled separately. It includes a
+    constraint check and a dual (α = 4, 2, 2) check.
+  - Q2: It documents the tie rule (lowest centroid index) and the empty-cluster rule (keep the previous
+    centroid). It has a table of cluster sizes for each k and a discussion of how the results relate to
+    the four generating blobs.
+  - Q3: Mean accuracy is 0.8280 for the baseline and 0.8644 with K-NN repair, a difference of +0.0364.
+    The report explains why repair can help or hurt.
+
+  The report also has an AI-help acknowledgment.
+
+  The README asks for a PDF. I didn't make one, so you'll need to convert the markdown yourself. For
+  example, pandoc report.md -o report.pdf works if you have pandoc installed.
+
+  The k = 6 discussion is approximate. Three clusters are close to 1000 points each, and the other 1025
+  points are split into three pieces. I didn't check which blobs those clusters came from. Look at
+  results/kmeans/kmeans_k6.png before submitting if you want to describe it more exactly.
+
+✻ Cooked for 26s · done 9:37 PM
+
+※ recap: Goal: finish Assignment 3 for CSE 242. The code for all three questions runs and `report.md` is
+  written. Next, convert the report to a PDF (for example with pandoc) and check the k=6 K-means plot 
+  before submitting. (disable recaps in /config)
+  
+❯ other than the pdf, are all necessary files in this directory? Can i zip and submit                   
+
+⏺ Bash(find . -type f -not -name '.DS_Store' | sort; git status --short; cat ../.gitignore 2>/dev/null)
+  ⎿  Error: Exit code 1
+     ./assignment3_template.py
+     ./kmeans_template.py
+     ./noisy_classification_template.py
+     ./README.md
+     ./report.md
+     ./results/kmeans/kmeans_k10.png
+     ./results/kmeans/kmeans_k2.png
+     ./results/kmeans/kmeans_k3.png
+     ./results/kmeans/kmeans_k4.png
+     … +8 lines (ctrl+o to expand)
+
+⏺ Almost. Everything the README lists is here except the PDF, with one exception: svm_data.png is
+  missing. The report refers to it, but I never ran the plot step.
+
+  I'll generate it now.
+
+⏺ Bash(/private/tmp/claude-505/venv/bin/python assignment3_template.py --task plot && ls svm_data.png)
+  ⎿  Saved plot to /Users/daniel/Documents/School/2026-2027/CSE242/assignments/Assignment3/svm_data
+     .png
+     svm_data.png
+  ⎿  Allowed by auto mode classifier
+
+⏺ svm_data.png is now in the folder. You can zip and submit once you've added the PDF.
+
+  What the folder holds against the README's deliverables:
+  - The three completed Python files: assignment3_template.py, kmeans_template.py and
+    noisy_classification_template.py.
+  - The experiment CSV: results/noise_comparison.csv.
+  - Plots the report references: svm_data.png and results/kmeans/*.png.
+  - The write-up: report.md. The README asks for a PDF, so convert it first (for example pandoc
+    report.md -o report.pdf).
+  - Image paths: if you convert with pandoc, run it from the Assignment3 folder. The report doesn't
+    embed the images, so the PDF only names them. Submit the PNGs alongside it.
+  - Template files: the README lists them as "the three completed Python files", so I left the _template
+    names alone.
+  - Extra files: README.md is in the folder too. Include it or not, since it's harmless either way.
+  - AI transcript: the README asks for acknowledgment of generative AI help. The report has a short
+    note, but if your instructor wants the actual transcript, you'll need to export it yourself.
+
