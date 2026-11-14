@@ -70,9 +70,9 @@ def derive_svm_separator():
     # Each support vector lies on its supporting line: y_i (w . x_i + b) = 1,
     # i.e. w1 x1 + w2 x2 + b = y_i. Three support vectors fix (w1, w2, b).
     ids = identify_support_vectors()
-    A = np.array([[*SVM_X[i - 1], 1.0] for i in ids])
-    rhs = np.array([SVM_Y[i - 1] for i in ids], dtype=float)
-    w1, w2, b = np.linalg.solve(A, rhs)
+    sv_points = np.array([[*SVM_X[i - 1], 1.0] for i in ids])  # rows (x1, x2, 1)
+    sv_labels = np.array([SVM_Y[i - 1] for i in ids], dtype=float)
+    w1, w2, b = np.linalg.solve(sv_points, sv_labels)
 
     # Distance from the boundary to the closest training points: 1 / ||w||.
     margin = 1.0 / np.hypot(w1, w2)

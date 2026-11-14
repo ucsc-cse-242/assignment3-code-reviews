@@ -91,6 +91,8 @@ def run_experiments(output_dir, seed=0, max_iterations=100):
         centroids, assignments = kmeans(data, initial, max_iterations)
 
         fig, ax = plt.subplots(figsize=(5, 4.5))
+        # Fixed color scale: cluster j gets the same tab10 color for every k.
+        # tab10 has 10 colors, enough for k <= 10; a larger k needs a bigger colormap.
         ax.scatter(data[:, 0], data[:, 1], c=assignments, cmap="tab10",
                    vmin=0, vmax=9, s=4, alpha=0.6)
         ax.scatter(centroids[:, 0], centroids[:, 1], c="black", marker="X",

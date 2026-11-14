@@ -10,6 +10,7 @@ SVM_C = 1.0
 SVM_GAMMA = 0.01
 POSITIVE_FLIP_PROBABILITY = 0.35
 NEGATIVE_FLIP_PROBABILITY = 0.20
+CSV_FIELDS = ("trial", "baseline_accuracy", "knn_accuracy")
 
 
 def generate_clean_split(rng, samples_per_class=1000):
@@ -104,18 +105,18 @@ def run_comparison(repeats, seed, neighbors, output_path):
         repaired_labels = repair_labels_knn(train_features, noisy_labels, neighbors)
         knn = train_and_evaluate(train_features, repaired_labels,
                                  test_features, test_labels)
-        rows.append({"trial": trial, "baseline_accuracy": baseline,
-                     "knn_accuracy": knn})
+        rows.append((trial, baseline, knn))
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["trial", "baseline_accuracy", "knn_accuracy"])
-        writer.writeheader()
+        writer = csv.writer(f)
+        writer.writerow(CSV_FIELDS)
         writer.writerows(rows)
 
-    baseline_mean = np.mean([r["baseline_accuracy"] for r in rows])
-    knn_mean = np.mean([r["knn_accuracy"] for r in rows])
+    _, baseline_scores, knn_scores = zip(*rows)
+    baseline_mean = np.mean(baseline_scores)
+    knn_mean = np.mean(knn_scores)
     print(f"Mean baseline accuracy:   {baseline_mean:.4f}")
     print(f"Mean K-NN repair accuracy: {knn_mean:.4f}")
     print(f"Change from baseline:     {knn_mean - baseline_mean:+.4f}")
