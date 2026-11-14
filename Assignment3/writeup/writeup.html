@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CSE 242 Assignment 3</title>
+<style>
+  @page { size: letter; margin: 0.85in 0.9in; }
+  body { font-family: "Charter", "Georgia", serif; font-size: 11pt; line-height: 1.45; color: #111; }
+  h1 { font-size: 18pt; margin: 0 0 2pt; }
+  .meta { color: #444; margin-bottom: 18pt; }
+  h2 { font-size: 14pt; margin: 22pt 0 6pt; border-bottom: 1px solid #bbb; padding-bottom: 2pt; }
+  h3 { font-size: 11.5pt; margin: 14pt 0 4pt; }
+  p { margin: 5pt 0; }
+  .eq { text-align: center; margin: 8pt 0; font-family: "Cambria Math", "STIX Two Math", serif; }
+  .answer { font-weight: bold; }
+  table { border-collapse: collapse; margin: 8pt auto; font-size: 10pt; }
+  th, td { border: 1px solid #999; padding: 3pt 9pt; text-align: center; }
+  th { background: #eee; }
+  figure { margin: 10pt 0; text-align: center; page-break-inside: avoid; }
+  figcaption { font-size: 9.5pt; color: #333; margin-top: 3pt; }
+  .grid { page-break-inside: avoid; break-inside: avoid; width: 76%; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6pt; }
+  .grid img { width: 100%; } .grid figure { margin: 2pt 0; }
+  .page-break { page-break-before: always; }
+  code { font-family: Menlo, monospace; font-size: 9.5pt; }
+  ul { margin: 4pt 0; padding-left: 20pt; }
+</style>
+</head>
+<body>
+
+<h1>CSE 242 — Assignment 3: SVMs, K-means, and K-NN</h1>
+<div class="meta">Nicholas Mo · Student ID 1997187 · Fall 2026</div>
+
+<h2>Question 1: Hard-margin linear SVM</h2>
+
+<h3>(a) Plot and support vectors</h3>
+
+<figure>
+  <img src="../svm_data.png" style="width: 52%">
+  <figcaption>Figure 1. The six training points. Positive points (y = +1) are blue circles; negative points (y = −1) are orange squares.</figcaption>
+</figure>
+
+<p>In a hard-margin SVM, the support vectors are the training points that lie exactly on the margin, closest to the decision boundary. Only these points determine where the boundary goes; any other point could be moved or removed, as long as it stays outside the margin, without changing the solution.</p>
+
+<p>By inspection, the support vectors are <span class="answer">points 1, 5, and 6</span>. Point 1 at (1, 1) is the positive point closest to the negative class. Points 5 at (1, 0) and 6 at (0, 1) are the negative points closest to point 1, each at distance 1. The gap between the classes is limited both vertically (point 1 vs. point 5) and horizontally (point 1 vs. point 6), so the boundary must run diagonally between them. Points 5 and 6 lie on the line x<sub>1</sub> + x<sub>2</sub> = 1, and point 1 lies on the parallel line x<sub>1</sub> + x<sub>2</sub> = 2. Points 2, 3, and 4 sit farther from this gap, so they do not affect the boundary.</p>
+
+<h3>(b) Maximum-margin boundary</h3>
+
+<p>For a linear hard-margin SVM, the support vectors satisfy w · x<sub>i</sub> + b = y<sub>i</sub>, that is, +1 for positive support vectors and −1 for negative ones. Writing this out for the three support vectors:</p>
+
+<table>
+  <tr><th>Point</th><th>x</th><th>y</th><th>Equation</th></tr>
+  <tr><td>1</td><td>(1, 1)</td><td>+1</td><td>w<sub>1</sub> + w<sub>2</sub> + b = 1</td></tr>
+  <tr><td>5</td><td>(1, 0)</td><td>−1</td><td>w<sub>1</sub> + b = −1</td></tr>
+  <tr><td>6</td><td>(0, 1)</td><td>−1</td><td>w<sub>2</sub> + b = −1</td></tr>
+</table>
+
+<p>Subtracting the second equation from the first gives w<sub>2</sub> = 2. Subtracting the third from the first gives w<sub>1</sub> = 2. Substituting into the second gives 2 + b = −1, so b = −3. The maximum-margin separating line is</p>
+
+<p class="eq answer">2x<sub>1</sub> + 2x<sub>2</sub> − 3 = 0 &nbsp;&nbsp;(equivalently, x<sub>1</sub> + x<sub>2</sub> = 1.5)</p>
+
+<p>As a check, every training point must satisfy y<sub>i</sub>(w · x<sub>i</sub> + b) ≥ 1:</p>
+
+<table>
+  <tr><th>Point</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+  <tr><td>w · x + b</td><td>1</td><td>3</td><td>3</td><td>−3</td><td>−1</td><td>−1</td></tr>
+  <tr><td>y(w · x + b)</td><td>1</td><td>3</td><td>3</td><td>3</td><td>1</td><td>1</td></tr>
+</table>
+
+<p>All constraints hold, and they are tight (equal to 1) only for points 1, 5, and 6, which confirms the choice of support vectors in part (a). The code solves the same 3 × 3 system with NumPy, and a library linear SVM with a very large C (approximating a hard margin) recovers the same w, b, and support vectors.</p>
+
+<h3>(b) Geometric margin</h3>
+
+<p>The geometric margin is the distance from the decision boundary to the closest training points:</p>
+
+<p class="eq">margin = 1 / ‖w‖ = 1 / √(2² + 2²) = 1 / (2√2) = √2 / 4 ≈ <span class="answer">0.354</span></p>
+
+<p>Separately, the full width between the two supporting lines (x<sub>1</sub> + x<sub>2</sub> = 1 and x<sub>1</sub> + x<sub>2</sub> = 2) is 2 / ‖w‖ = 1 / √2 ≈ 0.707.</p>
+
+<h2 class="page-break">Question 2: K-means</h2>
+
+<h3>(a) Implementation</h3>
+
+<p>The assignment step computes the squared Euclidean distance between every point and every centroid, and assigns each point to the centroid with the smallest distance. Squared distance gives the same ranking as Euclidean distance and avoids an unnecessary square root. If a point is equally distant from two or more centroids, it is assigned to the one with the <b>lowest centroid index</b>; this follows from NumPy's <code>argmin</code>, which returns the first minimum.</p>
+
+<p>The update step replaces each centroid with the mean of the points currently assigned to it. If a cluster receives no points, it <b>keeps its previous centroid</b>. This matters because the provided initializer samples data rows with replacement, so two initial centroids can be identical; under the tie rule above, every point then goes to the lower-indexed copy and the other cluster is empty. Keeping its old centroid avoids a division by zero and leaves the cluster available to pick up points in later iterations. The update returns a new array rather than modifying the input centroids.</p>
+
+<h3>(b) Results</h3>
+
+<p>The data come from <code>make_blobs(n_samples=4000, centers=4, cluster_std=0.60, random_state=0)</code>. K-means was run for k = 2, 3, 4, 6, and 10 with 100 iterations each, using a single NumPy generator seeded with 0 for initialization. The true blob labels were not used during clustering; they appear only in the reference plot.</p>
+
+<div class="grid">
+  <figure><img src="../results/kmeans/reference_true_labels.png"><figcaption>(a) True generating groups</figcaption></figure>
+  <figure><img src="../results/kmeans/kmeans_k2.png"><figcaption>(b) k = 2</figcaption></figure>
+  <figure><img src="../results/kmeans/kmeans_k3.png"><figcaption>(c) k = 3</figcaption></figure>
+  <figure><img src="../results/kmeans/kmeans_k4.png"><figcaption>(d) k = 4</figcaption></figure>
+  <figure><img src="../results/kmeans/kmeans_k6.png"><figcaption>(e) k = 6</figcaption></figure>
+  <figure><img src="../results/kmeans/kmeans_k10.png"><figcaption>(f) k = 10</figcaption></figure>
+</div>
+<p style="text-align:center; font-size:9.5pt; color:#333">Figure 2. Cluster assignments (colors) and final centroids (black X) for each k, with the true groups for reference.</p>
+
+<table>
+  <tr><th>k</th><th>Cluster sizes</th></tr>
+  <tr><td>2</td><td>1017, 2983</td></tr>
+  <tr><td>3</td><td>1008, 1992, 1000</td></tr>
+  <tr><td>4</td><td>1000, 998, 1002, 1000</td></tr>
+  <tr><td>6</td><td>1000, 299, 997, 407, 319, 978</td></tr>
+  <tr><td>10</td><td>365, 350, 253, 261, 988, 997, 123, 213, 285, 165</td></tr>
+</table>
+
+<p>When k is smaller than the number of generating groups, K-means has to merge groups. With k = 2, the isolated top blob forms one cluster and the remaining three blobs share the other, with a centroid that falls in the empty space between them. With k = 3, the top and lower-right blobs are recovered, while the two middle blobs are merged. At k = 4, the clusters match the four generating groups almost exactly, with sizes of roughly 1000 each. When k is larger than four, K-means splits real groups: at k = 6 the left blob is divided into three pieces, and at k = 10 several blobs are cut into fragments of 100–400 points. These extra boundaries are artifacts of where the initial centroids happened to land rather than real structure in the data. Increasing k always lowers the total within-cluster distance, but beyond k = 4 that decrease comes from cutting up compact groups, not from finding new ones.</p>
+
+<h2 class="page-break">Question 3: Noisy-label SVM and K-NN repair</h2>
+
+<h3>Setup</h3>
+
+<p>One training set and one independent test set were generated, each with 1,000 positive examples from N((1, 1), I) and 1,000 negative examples from N((−1, −1), 3I). The splits were held fixed, and label corruption and training were repeated for 20 trials using a NumPy generator seeded with 0. Every classifier is an RBF SVM with C = 1 and γ = 0.01, evaluated on the clean test labels.</p>
+
+<h3>(a) Noisy-label baseline</h3>
+
+<p>Each training label is flipped independently, with probability 0.35 if its original label is positive and 0.20 if it is negative. The flip probability is chosen from the original label and each example receives a single random draw, so no label can be flipped twice. Across the 20 trials, the baseline SVM trained on the noisy labels reached a <span class="answer">mean test accuracy of 0.8280</span> (standard deviation 0.018, range 0.784–0.847).</p>
+
+<h3>(b) K-NN label repair</h3>
+
+<p>For each training point, the method finds its five nearest <i>other</i> training points by Euclidean distance and replaces the point's label with the majority of their noisy labels. All repaired labels are computed from the same original noisy-label array, so the result does not depend on row order. A point is excluded from its own neighborhood by setting its self-distance to infinity, and ties in distance are broken in favor of the lower row index using a stable sort. Five binary votes cannot tie. The method uses only training features and noisy training labels. A fresh SVM with the same parameters is then trained on the repaired labels.</p>
+
+<table>
+  <tr><th>Method</th><th>Mean accuracy</th><th>Std. dev.</th><th>Min</th><th>Max</th></tr>
+  <tr><td>Baseline (noisy labels)</td><td>0.8280</td><td>0.018</td><td>0.784</td><td>0.847</td></tr>
+  <tr><td>K-NN repair</td><td>0.8644</td><td>0.010</td><td>0.834</td><td>0.873</td></tr>
+  <tr><td><b>Difference</b></td><td><b>+0.0364</b></td><td></td><td>+0.018</td><td>+0.071</td></tr>
+</table>
+
+<p>K-NN repair improved accuracy by <span class="answer">3.64 percentage points on average</span> and was better than the baseline in all 20 trials. It also made results more stable, roughly halving the trial-to-trial standard deviation. Per-trial results are in the attached <code>noise_comparison.csv</code>.</p>
+
+<h3>Discussion</h3>
+
+<p>Surprisingly, the repair did not reduce the overall amount of label noise. A supplementary analysis (<code>q3_diagnostics.py</code>, which reproduces the same 20 trials and uses the clean training labels only to measure label quality) shows the training-label error rate was 27.0% before repair and 27.3% after. What the repair changed is <i>where</i> the errors are. Away from the region where the two classes overlap, a wrong label is usually outvoted by correct neighbors, so labels there became cleaner. Inside the overlap, neighbors are mixed, and the vote is close to a coin flip.</p>
+
+<table>
+  <tr><th>Training labels</th><th>Label error</th><th>Test points predicted positive</th><th>Positives missed</th><th>Negatives misclassified</th></tr>
+  <tr><td>Noisy</td><td>27.0%</td><td>43.9%</td><td>23.3%</td><td>11.2%</td></tr>
+  <tr><td>Repaired</td><td>27.3%</td><td>50.9%</td><td>12.6%</td><td>14.5%</td></tr>
+</table>
+
+<p>The main source of the improvement is that the repair removed a bias in the baseline. Because positive labels are flipped more often than negative ones (35% vs. 20%), the noisy training set contains many negative-labeled points inside positive territory. These pull the baseline boundary toward the positive class, so it predicts positive for only 43.9% of test points even though half of them are positive, and it misses 23.3% of the positives. After repair, those scattered negative labels deep in positive territory are mostly voted back, and the classifier's predictions become balanced (50.9% positive). It trades a small increase in false positives for a large decrease in missed positives. For reference, an SVM trained on the clean labels reaches 0.867, and the Bayes-optimal classifier reaches 0.871, so the repaired SVM's 0.864 is close to the best achievable on this data.</p>
+
+<p>K-NN repair is not guaranteed to help. It works here because the noise is random and spread throughout the data while the true labels are spatially smooth, so a point's neighbors are a good estimate of its correct label. It can hurt when the noise is clustered, so that a whole neighborhood is mislabeled together; near the class boundary, where it overwrites correct labels with the local majority; for small or thin classes, which can be voted away by a surrounding larger class; and when the features are not meaningful for Euclidean distance.</p>
+
+<h2 class="page-break">Acknowledgment of outside help</h2>
+
+<p>I used Claude (Anthropic), an AI assistant, for this assignment. It wrote the code for all three questions, derived the SVM boundary and margin, wrote a test suite and a supplementary analysis script for Question 3, and drafted this write-up. I reviewed, ran, and verified the code and results. A transcript of the session is attached.</p>
+
+<p><i>Files submitted:</i> <code>assignment3_template.py</code>, <code>kmeans_template.py</code>, <code>noisy_classification_template.py</code>, <code>noise_comparison.csv</code>, this PDF, and the AI session transcript. Supplementary: <code>q3_diagnostics.py</code>, <code>test_assignment3.py</code>.</p>
+
+</body>
+</html>
